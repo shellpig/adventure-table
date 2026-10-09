@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from './support/roomTest'
+import { importCharacter } from './support/quickCombat'
 
 type Campaign = { id: string }
-type CharacterSummary = { id: string; name: string }
 type Seat = { id: string }
 type Lobby = { caller_access_session_id: string | null }
 
@@ -18,9 +18,7 @@ async function createSessionReadyCampaign(
   name: string,
   options: { selectPlayerCharacter: boolean },
 ) {
-  const characters = await json<CharacterSummary[]>(await request.get('/api/characters'))
-  expect(characters.length).toBeGreaterThan(0)
-  const character = characters[0]
+  const character = await importCharacter(request)
 
   const campaign = await json<Campaign>(await request.post(`/api/rooms/${roomId}/campaigns`, {
     data: { name, ruleset: 'dnd5e-2014' },

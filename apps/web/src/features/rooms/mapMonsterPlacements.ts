@@ -118,6 +118,61 @@ export function moveMonsterPlacement(
   )
 }
 
+/**
+ * M07-D D6d: double-click-safe creation. Two clicks that both take the
+ * "empty cell" branch (e.g. a rapid double-click before React re-renders,
+ * so both closures see the same placements array) must not append two
+ * rows. The check runs inside the functional state updater, which always
+ * sees the latest array, so the second create is a no-op returning the
+ * identical reference (no re-render, no second row).
+ */
+export function createPlacementIfFree(
+  placements: WorkingMonsterPlacement[],
+  draft: Omit<WorkingMonsterPlacement, 'clientId'>,
+  footprintOf: (templateRef: string) => MonsterFootprint,
+): { placements: WorkingMonsterPlacement[]; created: WorkingMonsterPlacement | null } {
+  const covered = placements.some((p) => {
+    const footprint = footprintOf(p.templateRef)
+    return (
+      draft.anchor_x >= p.anchor_x &&
+      draft.anchor_x < p.anchor_x + footprint.width &&
+      draft.anchor_y >= p.anchor_y &&
+      draft.anchor_y < p.anchor_y + footprint.height
+    )
+  })
+  if (covered) return { placements, created: null }
+  const created: WorkingMonsterPlacement = { ...draft, clientId: newPlacementClientId() }
+  return { placements: [...placements, created], created }
+}
+
+export type PlacementCreateStamp = { clientX: number; clientY: number; time: number }
+
+/** Window in which a second create click counts as a double-click repeat. */
+export const PLACEMENT_DOUBLE_CLICK_WINDOW_MS = 500
+
+/** Screen distance below which two create clicks are the same double-click. */
+export const PLACEMENT_DOUBLE_CLICK_DISTANCE_PX = 12
+
+/**
+ * M07-D D6d: the second half of a double-click must not place a second
+ * monster. Both halves land within a few screen pixels (even when human
+ * jitter drifts onto the neighbouring cell), while two deliberate
+ * placements in adjacent cells are a full cell (40px at zoom 1) apart —
+ * so the guard compares screen pixels, not cells. Deliberate placements
+ * are also seconds apart, outside the window.
+ */
+export function isRapidPlacementRepeat(
+  last: PlacementCreateStamp | null,
+  point: { clientX: number; clientY: number },
+  now: number,
+  windowMs: number = PLACEMENT_DOUBLE_CLICK_WINDOW_MS,
+  distancePx: number = PLACEMENT_DOUBLE_CLICK_DISTANCE_PX,
+): boolean {
+  if (!last) return false
+  if (now - last.time < 0 || now - last.time >= windowMs) return false
+  return Math.hypot(point.clientX - last.clientX, point.clientY - last.clientY) <= distancePx
+}
+
 export function removeMonsterPlacement(
   placements: WorkingMonsterPlacement[],
   clientId: string,
@@ -134,6 +189,136 @@ export function toggleMonsterPlacementVisibility(
       ? { ...p, visibility: p.visibility === 'hidden' ? 'public' : 'hidden' }
       : p,
   )
+}
+
+export type PlacementMapSize = { widthCells: number; heightCells: number }
+
+export type PlacementAnchor = { anchor_x: number; anchor_y: number }
+
+/**
+ * M07-D D6f: whether a footprint anchored at (anchor_x, anchor_y) sits fully
+ * inside the map without overlapping any existing placement footprint.
+ * Pure helper backing the Copy search below.
+ */
+export function isPlacementAnchorFree(
+  placements: WorkingMonsterPlacement[],
+  anchor: PlacementAnchor,
+  footprint: MonsterFootprint,
+  mapSize: PlacementMapSize,
+  footprintOf: (templateRef: string) => MonsterFootprint,
+): boolean {
+  if (
+    anchor.anchor_x < 0 ||
+    anchor.anchor_y < 0 ||
+    anchor.anchor_x + footprint.width > mapSize.widthCells ||
+    anchor.anchor_y + footprint.height > mapSize.heightCells
+  ) {
+    return false
+  }
+  return !placements.some((p) => {
+    const other = footprintOf(p.templateRef)
+    return (
+      anchor.anchor_x < p.anchor_x + other.width &&
+      p.anchor_x < anchor.anchor_x + footprint.width &&
+      anchor.anchor_y < p.anchor_y + other.height &&
+      p.anchor_y < anchor.anchor_y + footprint.height
+    )
+  })
+}
+
+/**
+ * M07-D D6f: nearest free anchor for the placement Copy button. Searches
+ * outward ring by ring (Chebyshev distance 1, 2, …) from the source anchor;
+ * within a ring the order is deterministic (dy ascending, then dx ascending),
+ * and the first anchor whose whole footprint (same size as the source) is
+ * inside the map and overlaps no existing placement footprint (source
+ * included, so a Large+ copy steps far enough to clear its own source) wins.
+ * Returns null when the map has no free anchor.
+ */
+export function findNearestFreePlacementAnchor(
+  placements: WorkingMonsterPlacement[],
+  sourceAnchor: PlacementAnchor,
+  footprint: MonsterFootprint,
+  mapSize: PlacementMapSize,
+  footprintOf: (templateRef: string) => MonsterFootprint,
+): PlacementAnchor | null {
+  const maxRing = Math.max(mapSize.widthCells, mapSize.heightCells)
+  for (let ring = 1; ring <= maxRing; ring++) {
+    for (let dy = -ring; dy <= ring; dy++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue
+        const anchor = {
+          anchor_x: sourceAnchor.anchor_x + dx,
+          anchor_y: sourceAnchor.anchor_y + dy,
+        }
+        if (isPlacementAnchorFree(placements, anchor, footprint, mapSize, footprintOf)) {
+          return anchor
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * M07-D D6e: content equality for placement arrays. The editor's placement
+ * updater pushes history only on a real change; helpers like
+ * `moveMonsterPlacement` always build a new array, so reference inequality
+ * alone cannot tell a no-op (same cell, unknown id) from an edit.
+ */
+export function sameMonsterPlacements(
+  a: WorkingMonsterPlacement[],
+  b: WorkingMonsterPlacement[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every((p, index) => {
+      const q = b[index]
+      return (
+        p.clientId === q.clientId &&
+        p.templateRef === q.templateRef &&
+        p.anchor_x === q.anchor_x &&
+        p.anchor_y === q.anchor_y &&
+        p.visibility === q.visibility
+      )
+    })
+  )
+}
+
+/** Cap for the M07-D D6e placement undo stack (mirrors the geometry history). */
+export const PLACEMENT_HISTORY_LIMIT = 50
+
+/**
+ * M07-D D6e: push the pre-edit placements array onto the undo stack, dropping
+ * the oldest entry past the cap. Pure helper so the push/cap/undo contract is
+ * unit-testable without React.
+ *
+ * A consecutive push of the identical reference is a no-op. The editor pushes
+ * from inside its state updater (so two clicks before a re-render still see
+ * each other's rows, per the D6d double-click design), and StrictMode
+ * double-invokes updaters in dev/E2E: both invocations push the same pre-edit
+ * array, which must yield one undo step, not two. Genuine consecutive edits
+ * always carry distinct arrays (every edit builds a new one), so the collapse
+ * can only merge a double-invoked push.
+ */
+export function pushPlacementHistory(
+  history: WorkingMonsterPlacement[][],
+  prev: WorkingMonsterPlacement[],
+  limit: number = PLACEMENT_HISTORY_LIMIT,
+): WorkingMonsterPlacement[][] {
+  if (history.length > 0 && history[history.length - 1] === prev) return history
+  return [...history.slice(-(limit - 1)), prev]
+}
+
+/**
+ * M07-D D6e: pop one placement undo step. Returns null when the stack is
+ * empty so the Undo button and Ctrl/Cmd+Z can stay disabled/no-op.
+ */
+export function popPlacementHistory(
+  history: WorkingMonsterPlacement[][],
+): { placements: WorkingMonsterPlacement[]; history: WorkingMonsterPlacement[][] } | null {
+  if (history.length === 0) return null
+  return { placements: history[history.length - 1], history: history.slice(0, -1) }
 }
 
 export type MonsterFootprint = { width: number; height: number }

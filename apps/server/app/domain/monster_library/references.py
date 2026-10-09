@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.engine import Connection
 
 from app.domain.monster_library.errors import (
@@ -31,6 +31,77 @@ from app.persistence.combat.tables import monster_instances, monster_templates
 from app.persistence.rooms.tables import campaigns
 
 
+_CUSTOM_PREFIX = "custom:"
+
+
+def _split_custom_prefix(ref: str) -> str | None:
+    """Split the ``custom:`` scheme prefix case-insensitively.
+
+    The scheme itself is always stored lowercase; accepting ``CUSTOM:`` /
+    ``Custom:`` spellings on input keeps non-standard client spellings from
+    slipping past validation as opaque built-in keys.
+    """
+    text = ref.strip()
+    if text[: len(_CUSTOM_PREFIX)].casefold() != _CUSTOM_PREFIX:
+        return None
+    return text[len(_CUSTOM_PREFIX) :].strip()
+
+
+def normalize_monster_template_ref(ref: str | None) -> str | None:
+    """Canonicalize a stored monster template reference (M07-D D1 F04).
+
+    ``custom:`` refs become ``custom:<lowercase UUID>`` so the deletion
+    reference scan cannot be bypassed by non-standard spellings (uppercase
+    hex or scheme, surrounding whitespace). Non-custom refs (built-in
+    content keys) are returned stripped but otherwise untouched.
+    Unparseable ``custom:`` values are returned stripped; format errors stay
+    the job of :func:`validate_custom_monster_template_ref`.
+    """
+    if ref is None:
+        return None
+    raw_uuid = _split_custom_prefix(ref)
+    if raw_uuid is None:
+        return ref.strip()
+    try:
+        template_id = UUID(raw_uuid)
+    except ValueError:
+        return ref.strip()
+    return f"{_CUSTOM_PREFIX}{template_id}"
+
+
+def canonicalize_state_monster_ref(state: dict[str, object] | None) -> dict[str, object] | None:
+    """Return a copy of a raw entry-state dict with a canonical ``custom:`` ref (M07-D D1 F04).
+
+    Typed payload models normalize on parse, but Runtime/override states are
+    stored as raw dicts, so write sites pass the dict through here before
+    persisting. Dicts without a ``monster_template_ref`` are returned as-is.
+    """
+    if not isinstance(state, dict):
+        return state
+    ref = state.get("monster_template_ref")
+    if not isinstance(ref, str) or not ref.strip():
+        return state
+    canonical = normalize_monster_template_ref(ref)
+    if canonical == ref:
+        return state
+    copied = dict(state)
+    copied["monster_template_ref"] = canonical
+    return copied
+
+
+def _parse_custom_ref_id(ref: object) -> UUID | None:
+    """Parse any spelling of a ``custom:`` ref to its template UUID."""
+    if not isinstance(ref, str):
+        return None
+    raw_uuid = _split_custom_prefix(ref)
+    if raw_uuid is None:
+        return None
+    try:
+        return UUID(raw_uuid)
+    except ValueError:
+        return None
+
+
 def validate_custom_monster_template_ref(
     connection: Connection,
     *,
@@ -42,16 +113,19 @@ def validate_custom_monster_template_ref(
 
     If ref starts with 'custom:<uuid>', locks the template row with FOR UPDATE,
     verifies it belongs to the given room, and checks that it is not archived
-    (unless previous_ref == ref, in which case an unchanged archived reference is permitted).
+    (unless previous_ref names the same template, in which case an unchanged
+    archived reference is permitted; both spellings are canonicalized before
+    comparing so legacy non-standard UUID spellings still match).
     Returns the parsed template UUID, or None if ref is not a custom template ref.
     """
     if ref is None:
         return None
-    normalized_ref = ref.strip()
+    normalized_ref = normalize_monster_template_ref(ref)
+    assert normalized_ref is not None
     if not normalized_ref.startswith("custom:"):
         return None
 
-    raw_uuid = normalized_ref.removeprefix("custom:").strip()
+    raw_uuid = normalized_ref.removeprefix("custom:")
     try:
         template_id = UUID(raw_uuid)
     except ValueError as exc:
@@ -75,7 +149,7 @@ def validate_custom_monster_template_ref(
         )
 
     # Unchanged archived references are allowed to stay
-    if previous_ref is not None and previous_ref.strip() == normalized_ref:
+    if previous_ref is not None and normalize_monster_template_ref(previous_ref) == normalized_ref:
         return template_id
 
     if row["archived_at"] is not None:
@@ -94,6 +168,12 @@ def is_monster_template_referenced(
 ) -> bool:
     """Scan all typed references to a custom monster template within the room.
 
+    Stored ``custom:`` refs are parsed to UUIDs before comparing (M07-D D1
+    F04), so legacy rows with non-standard UUID spellings (uppercase hex,
+    extra whitespace) still block deletion. New writes are canonicalized to
+    ``custom:<lowercase UUID>`` at the payload layer; the tolerant scan keeps
+    pre-existing rows safe without a data migration.
+
     Scans:
     - monster_instances.custom_template_id
     - battle_map_monster_placements.custom_template_id (M07-C)
@@ -102,7 +182,8 @@ def is_monster_template_referenced(
     - campaign_adventure_overrides
     - adventure_import_drafts
     """
-    ref_str = f"custom:{template_id}"
+    def _matches(ref: object) -> bool:
+        return _parse_custom_ref_id(ref) == template_id
 
     # 1. monster_instances
     inst_count = connection.scalar(
@@ -130,9 +211,9 @@ def is_monster_template_referenced(
     if placement_count and placement_count > 0:
         return True
 
-    # 3. adventure_entries
-    adv_count = connection.scalar(
-        select(func.count())
+    # 3. adventure_entries (JSON refs compared by parsed UUID, not spelling)
+    adv_refs = connection.scalars(
+        select(adventure_entries.c.data_json["monster_template_ref"].as_string())
         .select_from(
             adventure_entries.join(
                 adventure_definitions,
@@ -142,15 +223,14 @@ def is_monster_template_referenced(
         .where(
             adventure_definitions.c.room_id == room_id,
             adventure_entries.c.kind.in_(("npc", "monster_ref")),
-            adventure_entries.c.data_json["monster_template_ref"].as_string() == ref_str,
         )
-    )
-    if adv_count and adv_count > 0:
+    ).all()
+    if any(_matches(ref) for ref in adv_refs):
         return True
 
     # 4. campaign_world_entries
-    world_count = connection.scalar(
-        select(func.count())
+    world_refs = connection.scalars(
+        select(campaign_world_entries.c.state_json["monster_template_ref"].as_string())
         .select_from(
             campaign_world_entries.join(
                 campaigns,
@@ -160,47 +240,40 @@ def is_monster_template_referenced(
         .where(
             campaigns.c.room_id == room_id,
             campaign_world_entries.c.kind == "npc",
-            campaign_world_entries.c.state_json["monster_template_ref"].as_string() == ref_str,
         )
-    )
-    if world_count and world_count > 0:
+    ).all()
+    if any(_matches(ref) for ref in world_refs):
         return True
 
     # 5. campaign_adventure_overrides
-    override_count = connection.scalar(
-        select(func.count())
+    override_refs = connection.scalars(
+        select(campaign_adventure_overrides.c.state_json["monster_template_ref"].as_string())
         .select_from(
             campaign_adventure_overrides.join(
                 campaigns,
                 campaign_adventure_overrides.c.campaign_id == campaigns.c.id,
             )
         )
-        .where(
-            campaigns.c.room_id == room_id,
-            campaign_adventure_overrides.c.state_json["monster_template_ref"].as_string() == ref_str,
-        )
-    )
-    if override_count and override_count > 0:
+        .where(campaigns.c.room_id == room_id)
+    ).all()
+    if any(_matches(ref) for ref in override_refs):
         return True
 
     # 6. campaign_world_mutations (durable mutation typed provenance)
-    mutation_count = connection.scalar(
-        select(func.count())
+    mutation_rows = connection.execute(
+        select(
+            campaign_world_mutations.c.command_payload["state"]["monster_template_ref"].as_string(),
+            campaign_world_mutations.c.result_payload["state"]["monster_template_ref"].as_string(),
+        )
         .select_from(
             campaign_world_mutations.join(
                 campaigns,
                 campaign_world_mutations.c.campaign_id == campaigns.c.id,
             )
         )
-        .where(
-            campaigns.c.room_id == room_id,
-            or_(
-                campaign_world_mutations.c.command_payload["state"]["monster_template_ref"].as_string() == ref_str,
-                campaign_world_mutations.c.result_payload["state"]["monster_template_ref"].as_string() == ref_str,
-            ),
-        )
-    )
-    if mutation_count and mutation_count > 0:
+        .where(campaigns.c.room_id == room_id)
+    ).all()
+    if any(_matches(value) for row in mutation_rows for value in tuple(row)):
         return True
 
     # 7. adventure_import_drafts
@@ -223,8 +296,16 @@ def is_monster_template_referenced(
                         payload = entry.get("payload")
                         if (
                             isinstance(payload, dict)
-                            and payload.get("monster_template_ref") == ref_str
+                            and _matches(payload.get("monster_template_ref"))
                         ):
                             return True
 
     return False
+
+
+__all__ = [
+    "canonicalize_state_monster_ref",
+    "is_monster_template_referenced",
+    "normalize_monster_template_ref",
+    "validate_custom_monster_template_ref",
+]

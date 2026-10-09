@@ -84,6 +84,9 @@ test('P5-G map editor saves new walls, doors and pen-styled drawings', async ({ 
 
   // Single clicks next to a grid edge place a one-cell wall and door.
   await page.getByTestId('map-editor-tool-wall').click()
+  // Leaving the pen tool removes its picker row and shifts the canvas; bring
+  // the canvas back into view before clicking grid edges.
+  await editorCanvas(page).scrollIntoViewIfNeeded()
   const wallAt = await mapPoint(page, 6.5, 4.05)
   await page.mouse.click(wallAt.x, wallAt.y)
   await page.getByTestId('map-editor-tool-door').click()

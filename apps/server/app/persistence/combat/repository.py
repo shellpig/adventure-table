@@ -298,6 +298,82 @@ class MonsterRepository:
             now=now,
         )
 
+    def get_template_in_transaction(
+        self, connection: Connection, template_id: UUID
+    ) -> StoredMonsterTemplate | None:
+        """Read a template on the caller's Connection (shares its locks)."""
+        row = connection.execute(
+            select(monster_templates).where(monster_templates.c.id == template_id)
+        ).mappings().one_or_none()
+        return _template_from_row(row) if row is not None else None
+
+    def create_instance_from_template_in_transaction(
+        self,
+        connection: Connection,
+        template_id: UUID,
+        *,
+        campaign_id: UUID,
+        room_id: UUID,
+        name: str | None = None,
+        instance_id: UUID | None = None,
+        resources: dict[str, Any] | None = None,
+        visibility: str = "public",
+        position_note: str | None = None,
+        now: datetime | None = None,
+    ) -> StoredMonsterInstance:
+        """Lock the template row and insert the Instance on one Connection (M07-D D1 F08).
+
+        The template row is read ``FOR UPDATE`` before the room/archived
+        checks, so a concurrent archive (or cross-room move) cannot slip
+        between the check and the insert. Callers pass pre-seeded
+        ``resources`` (see ``initial_monster_resources``); ``None`` keeps the
+        legacy empty-resources behavior for paths that seed elsewhere.
+        """
+        row = connection.execute(
+            select(monster_templates)
+            .where(monster_templates.c.id == template_id)
+            .with_for_update()
+        ).mappings().one_or_none()
+        if row is None:
+            raise MonsterPersistenceError(f"monster template not found: {template_id}")
+        template = _template_from_row(row)
+        campaign_room_id = connection.scalar(
+            select(campaigns.c.room_id).where(campaigns.c.id == campaign_id)
+        )
+        if campaign_room_id is None:
+            raise MonsterPersistenceError(f"campaign not found: {campaign_id}")
+        if template.room_id != campaign_room_id or template.room_id != room_id:
+            raise MonsterPersistenceError("monster template and campaign must belong to the same room")
+        if template.archived_at is not None:
+            raise MonsterPersistenceError(f"monster template '{template_id}' is archived")
+
+        rules_snapshot = deepcopy(template.rules)
+        if name and name.strip():
+            instance_name = name.strip()
+            name_is_custom = True
+        else:
+            instance_name = template.name
+            name_is_custom = bool(template.presentation_json.get("name_is_custom", True))
+
+        rules_snapshot["presentation"] = {
+            "names": deepcopy(template.presentation_json.get("names", {})),
+            "name_is_custom": name_is_custom,
+        }
+        rules_snapshot["provenance"] = {"template_revision": template.revision}
+
+        return self.create_instance_in_transaction(
+            connection,
+            campaign_id=campaign_id,
+            name=instance_name,
+            rules_snapshot=rules_snapshot,
+            custom_template_id=template.id,
+            instance_id=instance_id,
+            resources=resources,
+            visibility=visibility,
+            position_note=position_note,
+            now=now,
+        )
+
     def create_instance_from_template(
         self,
         template_id: UUID,

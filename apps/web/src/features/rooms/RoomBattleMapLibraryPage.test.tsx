@@ -120,6 +120,11 @@ describe('RoomBattleMapLibraryPage permissions & member rendering', () => {
 describe('RoomBattleMapLibraryPage contract and source assertions', () => {
   const source = readFileSync(new URL('./RoomBattleMapLibraryPage.tsx', import.meta.url), 'utf8')
 
+  it('closes map modals on Escape only when no action is pending', () => {
+    expect(source).toContain("event.key !== 'Escape' || pendingAction !== null")
+    expect(source.match(/<div className="modal-backdrop" role="dialog" aria-modal="true">/g)).toHaveLength(3)
+  })
+
   it('contains expected_revision on copy, archive, and delete operations', () => {
     expect(source).toContain('expected_revision: copyTargetMap.revision')
     expect(source).toContain('expected_revision: map.revision')

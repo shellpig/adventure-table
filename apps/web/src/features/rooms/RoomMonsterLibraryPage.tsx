@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import {
   archiveCustomMonster,
@@ -11,15 +11,25 @@ import {
   patchCustomMonster,
   type CreateCustomMonsterInput,
   type MonsterLibraryDetailView,
+  type MonsterLibraryListOptions,
   type MonsterLibrarySummaryView,
   type PatchCustomMonsterInput,
 } from '../../api/monsterLibrary'
 import type { RoomAuthority } from '../../api/rooms'
 import { useLocale } from '../../i18n/LocaleProvider'
 import {
+  customMonsterFormFromDetail,
+  customMonsterScalarPatch,
+  monsterSpeedString,
+  type CustomMonsterFormValues,
+} from './monsterLibraryForm'
+import {
+  CHALLENGE_RATINGS,
   formatAbilityName,
+  formatChallengeRating,
   formatMonsterName,
   formatMonsterRuleField,
+  formatWalkSpeed,
   monsterLibraryCopy,
   monsterLibraryErrorMessage,
   SRD_ALIGNMENTS,
@@ -27,6 +37,14 @@ import {
   SRD_TYPES,
   type MonsterLibraryCopy,
 } from './monsterLibraryCopy'
+import {
+  clampListWidth,
+  MAX_LIST_WIDTH,
+  MIN_LIST_WIDTH,
+  readListWidth,
+  resolveKeyboardListWidth,
+  writeListWidth,
+} from './monsterLibraryLayout'
 import { recentRoomForId } from './roomStorage'
 import './rooms.css'
 
@@ -45,11 +63,14 @@ type EditableMonsterAbility = {
 function toEditableAbilities(
   items: Array<{ name: string; desc?: string | null }> | undefined,
 ): EditableMonsterAbility[] {
-  return (items ?? []).map((item, sourceIndex) => ({
-    sourceIndex,
-    name: item.name,
-    desc: item.desc ?? '',
-  }))
+  if (!Array.isArray(items)) return []
+  return items
+    .filter((item) => typeof item === 'object' && item !== null)
+    .map((item, sourceIndex) => ({
+      sourceIndex,
+      name: typeof item.name === 'string' ? item.name : '',
+      desc: typeof item.desc === 'string' ? item.desc : '',
+    }))
 }
 
 export function roomMonsterLibraryRouteFromPath(
@@ -74,15 +95,6 @@ function formatModifier(score: number): string {
   return mod >= 0 ? `+${mod}` : `${mod}`
 }
 
-function getSpeedString(speed: unknown): string {
-  if (typeof speed === 'string') return speed
-  if (typeof speed === 'object' && speed !== null) {
-    const s = speed as Record<string, unknown>
-    if (typeof s.walk === 'string') return s.walk
-  }
-  return '30 ft.'
-}
-
 export type RoomMonsterLibraryPageProps = {
   roomId: string
 }
@@ -102,6 +114,21 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   const [sourceFilter, setSourceFilter] = useState<'all' | 'builtin' | 'custom'>('all')
   const [showArchived, setShowArchived] = useState(false)
 
+  // D.4 sort & filter ('' = all/unlimited; any change resets to offset 0)
+  const [sortField, setSortField] = useState('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [sizeFilter, setSizeFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [crMode, setCrMode] = useState<'any' | 'eq' | 'range'>('any')
+  const [crEq, setCrEq] = useState('0')
+  const [crMin, setCrMin] = useState('')
+  const [crMax, setCrMax] = useState('')
+
+  // CR range guards the fetch: min > max shows an inline message and skips
+  // the request instead of sending an invalid combination to the server.
+  const crRangeInvalid =
+    crMode === 'range' && crMin !== '' && crMax !== '' && Number(crMin) > Number(crMax)
+
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [detail, setDetail] = useState<MonsterLibraryDetailView | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
@@ -112,24 +139,26 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
     'create' | 'copy' | 'save' | 'archive' | 'delete' | 'fromContent' | null
   >(null)
 
-  // Custom monster form fields
+  // Custom monster form fields ('' / null = not set in the stored rules; see monsterLibraryForm.ts)
   const [formName, setFormName] = useState('')
   const [formAc, setFormAc] = useState<number>(10)
   const [formMaxHp, setFormMaxHp] = useState<number>(10)
   const [formCr, setFormCr] = useState<number>(0)
-  const [formSize, setFormSize] = useState('Medium')
-  const [formType, setFormType] = useState('humanoid')
-  const [formAlignment, setFormAlignment] = useState('unaligned')
+  const [formSize, setFormSize] = useState('')
+  const [formType, setFormType] = useState('')
+  const [formAlignment, setFormAlignment] = useState('')
   const [formSpeed, setFormSpeed] = useState('30 ft.')
-  const [formStr, setFormStr] = useState<number>(10)
-  const [formDex, setFormDex] = useState<number>(10)
-  const [formCon, setFormCon] = useState<number>(10)
-  const [formInt, setFormInt] = useState<number>(10)
-  const [formWis, setFormWis] = useState<number>(10)
-  const [formCha, setFormCha] = useState<number>(10)
+  const [formStr, setFormStr] = useState<number | null>(null)
+  const [formDex, setFormDex] = useState<number | null>(null)
+  const [formCon, setFormCon] = useState<number | null>(null)
+  const [formInt, setFormInt] = useState<number | null>(null)
+  const [formWis, setFormWis] = useState<number | null>(null)
+  const [formCha, setFormCha] = useState<number | null>(null)
   const [formDescription, setFormDescription] = useState('')
   const [formTraits, setFormTraits] = useState<EditableMonsterAbility[]>([])
   const [formActions, setFormActions] = useState<EditableMonsterAbility[]>([])
+  // Snapshot of the loaded rules the dirty-field save diffs against.
+  const [formBaseline, setFormBaseline] = useState<CustomMonsterFormValues | null>(null)
 
   // Modal dialog states
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -143,6 +172,45 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   const [showFromContentModal, setShowFromContentModal] = useState(false)
   const [fromContentName, setFromContentName] = useState('')
 
+  const [listWidth, setListWidth] = useState(() => readListWidth())
+  const listWidthRef = useRef(listWidth)
+  const layoutRef = useRef<HTMLDivElement | null>(null)
+
+  const applyListWidth = (next: number, persist: boolean) => {
+    listWidthRef.current = next
+    setListWidth(next)
+    if (persist) writeListWidth(next)
+  }
+
+  const handleSplitterPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handleSplitterPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const layout = layoutRef.current
+    if (!layout || !event.currentTarget.hasPointerCapture(event.pointerId)) return
+    const rect = layout.getBoundingClientRect()
+    applyListWidth(clampListWidth(event.clientX - rect.left, rect.width), false)
+  }
+
+  const handleSplitterPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+    event.currentTarget.releasePointerCapture(event.pointerId)
+    writeListWidth(listWidthRef.current)
+  }
+
+  const handleSplitterKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const next = resolveKeyboardListWidth(
+      listWidthRef.current,
+      event.key,
+      layoutRef.current?.getBoundingClientRect().width,
+    )
+    if (next === null) return
+    event.preventDefault()
+    applyListWidth(next, true)
+  }
+
   const PAGE_SIZE = 50
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -152,6 +220,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   const listRequestSeq = useRef(0)
 
   const reloadList = async (reset = true) => {
+    if (crRangeInvalid) return
     const requestSeq = ++listRequestSeq.current
     if (reset) {
       setLoadingList(true)
@@ -160,13 +229,21 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
     }
     try {
       const offset = reset ? 0 : monsters.length
-      const items = await listMonsterLibrary(roomId, token, {
+      const options: MonsterLibraryListOptions = {
         query: searchQuery.trim() || undefined,
         include_archived: showArchived,
         source: sourceFilter,
         limit: PAGE_SIZE,
         offset,
-      })
+      }
+      if (sortField !== 'name') options.sort = sortField
+      if (sortOrder !== 'asc') options.order = sortOrder
+      if (sizeFilter) options.size = sizeFilter
+      if (typeFilter) options.type = typeFilter
+      if (crMode === 'eq' && crEq !== '') options.cr_eq = Number(crEq)
+      if (crMode === 'range' && crMin !== '') options.cr_min = Number(crMin)
+      if (crMode === 'range' && crMax !== '') options.cr_max = Number(crMax)
+      const items = await listMonsterLibrary(roomId, token, options)
       if (requestSeq !== listRequestSeq.current) return
       if (reset) {
         setMonsters(items)
@@ -188,9 +265,23 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
   useEffect(() => {
     if (!recent || !canManage) return
+    if (crRangeInvalid) return
     void reloadList(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, token, canManage, sourceFilter, showArchived])
+  }, [roomId, token, canManage, sourceFilter, showArchived, sortField, sortOrder, sizeFilter, typeFilter, crMode, crEq, crMin, crMax, crRangeInvalid])
+
+  // Escape closes whichever monster modal is open, unless an action is pending.
+  useEffect(() => {
+    if (!showCreateModal && !showFromContentModal && !showCopyModal) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || pendingAction !== null) return
+      setShowCreateModal(false)
+      setShowFromContentModal(false)
+      setShowCopyModal(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showCreateModal, showFromContentModal, showCopyModal, pendingAction])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -213,26 +304,29 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
         if (!active) return
         setDetail(data)
         if (data.source_kind === 'custom') {
-          const rules = data.rules
-          const scores = rules.ability_scores
-          setFormName(data.name)
-          setFormAc(rules.armor_class)
-          setFormMaxHp(rules.max_hp)
-          setFormCr(rules.challenge_rating ?? 0)
-          setFormSize(rules.size)
-          setFormType(rules.type)
-          setFormAlignment(rules.alignment)
-          setFormSpeed(getSpeedString(rules.speed))
-          setFormStr(scores.strength)
-          setFormDex(scores.dexterity)
-          setFormCon(scores.constitution)
-          setFormInt(scores.intelligence)
-          setFormWis(scores.wisdom)
-          setFormCha(scores.charisma)
-          setFormDescription(rules.description ?? '')
+          // One atomic computation: the loader never throws on partial
+          // shapes (e.g. Quick Enemy templates), so the form is either
+          // fully initialized or left untouched on error.
+          const form = customMonsterFormFromDetail(data)
+          setFormName(form.name)
+          setFormAc(form.armorClass)
+          setFormMaxHp(form.maxHp)
+          setFormCr(form.challengeRating)
+          setFormSize(form.size)
+          setFormType(form.type)
+          setFormAlignment(form.alignment)
+          setFormSpeed(form.speed)
+          setFormStr(form.abilities.strength)
+          setFormDex(form.abilities.dexterity)
+          setFormCon(form.abilities.constitution)
+          setFormInt(form.abilities.intelligence)
+          setFormWis(form.abilities.wisdom)
+          setFormCha(form.abilities.charisma)
+          setFormDescription(form.description)
 
-          setFormTraits(toEditableAbilities(rules.traits))
-          setFormActions(toEditableAbilities(rules.actions))
+          setFormTraits(toEditableAbilities(data.rules.traits))
+          setFormActions(toEditableAbilities(data.rules.actions))
+          setFormBaseline(form)
         }
       })
       .catch((cause) => {
@@ -325,44 +419,45 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   const handleSaveCustom = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!detail || detail.revision === null || detail.revision === undefined) return
+    if (!formBaseline) return
     setPendingAction('save')
     setDetailError(null)
     setActionNotice(null)
 
     const templateId = detail.ref.replace(/^custom:/, '')
-    const payload: PatchCustomMonsterInput = { expected_revision: detail.revision }
+    const current: CustomMonsterFormValues = {
+      name: formName,
+      armorClass: formAc,
+      maxHp: formMaxHp,
+      challengeRating: formCr,
+      size: formSize,
+      type: formType,
+      alignment: formAlignment,
+      speed: formSpeed,
+      abilities: {
+        strength: formStr,
+        dexterity: formDex,
+        constitution: formCon,
+        intelligence: formInt,
+        wisdom: formWis,
+        charisma: formCha,
+      },
+      description: formDescription,
+    }
+    // Dirty-field save: only actually-changed scalars go out; fields still
+    // unset are never sent, so editor defaults can't pollute stored rules.
+    const payload: PatchCustomMonsterInput = customMonsterScalarPatch(
+      formBaseline,
+      current,
+      detail.revision,
+    )
     const rules = detail.rules
-    if (formName.trim() !== detail.name) payload.name = formName.trim()
-    if (formAc !== rules.armor_class) payload.armor_class = formAc
-    if (formMaxHp !== rules.max_hp) payload.max_hp = formMaxHp
-    if (formCr !== (rules.challenge_rating ?? 0)) payload.challenge_rating = formCr
-    if (formSize !== rules.size) payload.size = formSize
-    if (formType !== rules.type) payload.type = formType
-    if (formAlignment !== rules.alignment) payload.alignment = formAlignment
-    if (formSpeed !== getSpeedString(rules.speed)) {
+    if (formSpeed !== monsterSpeedString(rules.speed)) {
       payload.speed =
         typeof rules.speed === 'object' && rules.speed !== null
           ? { ...rules.speed, walk: formSpeed }
           : formSpeed
     }
-
-    const scoreUpdates: Record<string, number> = {}
-    const scores = {
-      strength: formStr,
-      dexterity: formDex,
-      constitution: formCon,
-      intelligence: formInt,
-      wisdom: formWis,
-      charisma: formCha,
-    }
-    for (const [ability, score] of Object.entries(scores)) {
-      if (rules.ability_scores[ability as keyof typeof rules.ability_scores] !== score) {
-        scoreUpdates[ability] = score
-      }
-    }
-    if (Object.keys(scoreUpdates).length > 0) payload.ability_scores = scoreUpdates
-
-    if (formDescription !== (rules.description ?? '')) payload.description = formDescription
 
     const traits = rules.traits ?? []
     if (
@@ -403,8 +498,27 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
     try {
       const updated = await patchCustomMonster(roomId, templateId, token, payload)
       setDetail(updated)
+      // Rebase both the form and the diff baseline on the saved truth so a
+      // second save without edits sends nothing.
+      const savedForm = customMonsterFormFromDetail(updated)
+      setFormName(savedForm.name)
+      setFormAc(savedForm.armorClass)
+      setFormMaxHp(savedForm.maxHp)
+      setFormCr(savedForm.challengeRating)
+      setFormSize(savedForm.size)
+      setFormType(savedForm.type)
+      setFormAlignment(savedForm.alignment)
+      setFormSpeed(savedForm.speed)
+      setFormStr(savedForm.abilities.strength)
+      setFormDex(savedForm.abilities.dexterity)
+      setFormCon(savedForm.abilities.constitution)
+      setFormInt(savedForm.abilities.intelligence)
+      setFormWis(savedForm.abilities.wisdom)
+      setFormCha(savedForm.abilities.charisma)
+      setFormDescription(savedForm.description)
       setFormTraits(toEditableAbilities(updated.rules.traits))
       setFormActions(toEditableAbilities(updated.rules.actions))
+      setFormBaseline(savedForm)
       setActionNotice(copy.saveAction)
       await reloadList()
     } catch (cause) {
@@ -487,6 +601,9 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   return (
     <main className="landing-page room-workspace-page monster-library-page">
       <section className="landing-card room-workspace-card monster-library-card">
+        <a className="button secondary monster-library__back" href={`/rooms/${roomId}`}>
+          {copy.backRoom}
+        </a>
         <div className="monster-library__header">
           <div>
             <h1>{copy.title}</h1>
@@ -506,9 +623,6 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
             >
               {copy.createAction}
             </button>
-            <a className="button secondary" href={`/rooms/${roomId}`}>
-              {copy.backRoom}
-            </a>
           </div>
         </div>
 
@@ -538,12 +652,112 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
             />
             {copy.showArchived}
           </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.sortLabel}</span>
+            <select value={sortField} onChange={(e) => setSortField(e.target.value)}>
+              <option value="name">{copy.sortName}</option>
+              <option value="armor_class">{copy.sortArmorClass}</option>
+              <option value="max_hp">{copy.sortMaxHp}</option>
+              <option value="challenge_rating">{copy.sortChallengeRating}</option>
+              <option value="walk_speed">{copy.sortWalkSpeed}</option>
+            </select>
+          </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.orderLabel}</span>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+            >
+              <option value="asc">{copy.orderAsc}</option>
+              <option value="desc">{copy.orderDesc}</option>
+            </select>
+          </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.filterSizeLabel}</span>
+            <select value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)}>
+              <option value="">{copy.filterAllOption}</option>
+              {SRD_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {formatMonsterRuleField('size', size, locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.filterTypeLabel}</span>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">{copy.filterAllOption}</option>
+              {SRD_TYPES.map((monsterType) => (
+                <option key={monsterType} value={monsterType}>
+                  {formatMonsterRuleField('type', monsterType, locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.crModeLabel}</span>
+            <select
+              value={crMode}
+              onChange={(e) => setCrMode(e.target.value as 'any' | 'eq' | 'range')}
+            >
+              <option value="any">{copy.crModeAny}</option>
+              <option value="eq">{copy.crModeEq}</option>
+              <option value="range">{copy.crModeRange}</option>
+            </select>
+          </label>
+          {crMode === 'eq' ? (
+            <label className="monster-library__filter-label">
+              <span>{copy.crEqLabel}</span>
+              <select value={crEq} onChange={(e) => setCrEq(e.target.value)}>
+                {CHALLENGE_RATINGS.map((cr) => (
+                  <option key={cr} value={String(cr)}>
+                    {formatChallengeRating(cr)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {crMode === 'range' ? (
+            <>
+              <label className="monster-library__filter-label">
+                <span>{copy.crMinLabel}</span>
+                <select value={crMin} onChange={(e) => setCrMin(e.target.value)}>
+                  <option value="">{copy.crUnlimitedOption}</option>
+                  {CHALLENGE_RATINGS.map((cr) => (
+                    <option key={cr} value={String(cr)}>
+                      {formatChallengeRating(cr)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="monster-library__filter-label">
+                <span>{copy.crMaxLabel}</span>
+                <select value={crMax} onChange={(e) => setCrMax(e.target.value)}>
+                  <option value="">{copy.crUnlimitedOption}</option>
+                  {CHALLENGE_RATINGS.map((cr) => (
+                    <option key={cr} value={String(cr)}>
+                      {formatChallengeRating(cr)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : null}
+          {crRangeInvalid ? (
+            <p className="monster-library__filter-error" role="alert">
+              {copy.errCrRangeInvalid}
+            </p>
+          ) : null}
           <button className="button secondary" type="submit" disabled={loadingList}>
             {copy.refreshAction}
           </button>
         </form>
 
-        <div className="monster-library__layout">
+        <div
+          ref={layoutRef}
+          className="monster-library__layout"
+          style={{ '--monster-library-list-width': `${listWidth}px` } as CSSProperties}
+        >
           {/* List panel */}
           <aside className="monster-library__sidebar" aria-label={copy.title}>
             {loadingList ? (
@@ -580,13 +794,16 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                               <span>{formatMonsterRuleField('type', item.type, locale)}</span>
                             ) : null}
                             {item.challenge_rating !== null && item.challenge_rating !== undefined ? (
-                              <span>CR {item.challenge_rating}</span>
+                              <span>CR {formatChallengeRating(item.challenge_rating)}</span>
                             ) : null}
                             {item.armor_class !== null && item.armor_class !== undefined ? (
                               <span>AC {item.armor_class}</span>
                             ) : null}
                             {item.max_hp !== null && item.max_hp !== undefined ? (
                               <span>HP {item.max_hp}</span>
+                            ) : null}
+                            {item.walk_speed !== null && item.walk_speed !== undefined ? (
+                              <span>{formatWalkSpeed(item.walk_speed, locale)}</span>
                             ) : null}
                           </div>
                         </button>
@@ -609,6 +826,22 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
               </>
             )}
           </aside>
+
+          <div
+            className="monster-library__splitter"
+            role="separator"
+            tabIndex={0}
+            aria-orientation="vertical"
+            aria-label={copy.resizeList}
+            title={copy.resizeListHint}
+            aria-valuemin={MIN_LIST_WIDTH}
+            aria-valuemax={MAX_LIST_WIDTH}
+            aria-valuenow={listWidth}
+            onPointerDown={handleSplitterPointerDown}
+            onPointerMove={handleSplitterPointerMove}
+            onPointerUp={handleSplitterPointerUp}
+            onKeyDown={handleSplitterKeyDown}
+          />
 
           {/* Detail panel */}
           <section className="monster-library__detail" aria-label="Monster details">
@@ -647,6 +880,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                     <div className="monster-library__stat-block">
                       <h3>{copy.coreStatsHeading}</h3>
                       <div className="monster-library__stats-grid">
+                        <div className="monster-library__stats-row">
                         <div>
                           <strong>{copy.fieldArmorClass}:</strong> {detail.rules.armor_class}
                         </div>
@@ -657,12 +891,14 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                         detail.rules.challenge_rating !== undefined ? (
                           <div>
                             <strong>{copy.fieldChallengeRating}:</strong>{' '}
-                            {detail.rules.challenge_rating}
+                            {formatChallengeRating(detail.rules.challenge_rating)}
                           </div>
                         ) : null}
                         <div>
-                          <strong>{copy.fieldSpeed}:</strong> {getSpeedString(detail.rules.speed)}
+                          <strong>{copy.fieldSpeed}:</strong> {monsterSpeedString(detail.rules.speed)}
                         </div>
+                        </div>
+                        <div className="monster-library__stats-row">
                         <div>
                           <strong>{copy.fieldSize}:</strong>{' '}
                           {formatMonsterRuleField('size', detail.rules.size, locale)}
@@ -674,6 +910,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                         <div>
                           <strong>{copy.fieldAlignment}:</strong>{' '}
                           {formatMonsterRuleField('alignment', detail.rules.alignment, locale)}
+                        </div>
                         </div>
                       </div>
 
@@ -963,14 +1200,22 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                       </label>
                       <label>
                         <span>{copy.fieldChallengeRating}</span>
-                        <input
-                          type="number"
-                          min={0}
-                          step="any"
-                          value={formCr}
+                        <select
+                          value={String(formCr)}
                           disabled={pendingAction !== null}
                           onChange={(e) => setFormCr(Number(e.target.value))}
-                        />
+                        >
+                          {!CHALLENGE_RATINGS.includes(formCr) ? (
+                            <option value={String(formCr)}>
+                              {formatChallengeRating(formCr)}
+                            </option>
+                          ) : null}
+                          {CHALLENGE_RATINGS.map((cr) => (
+                            <option key={cr} value={String(cr)}>
+                              {formatChallengeRating(cr)}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                       <label>
                         <span>{copy.fieldSpeed}</span>
@@ -988,6 +1233,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           disabled={pendingAction !== null}
                           onChange={(e) => setFormSize(e.target.value)}
                         >
+                          <option value="">{copy.unsetOption}</option>
                           {!SRD_SIZES.includes(formSize as (typeof SRD_SIZES)[number]) && formSize ? (
                             <option value={formSize}>
                               {formatMonsterRuleField('size', formSize, locale)}
@@ -1007,6 +1253,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           disabled={pendingAction !== null}
                           onChange={(e) => setFormType(e.target.value)}
                         >
+                          <option value="">{copy.unsetOption}</option>
                           {!SRD_TYPES.includes(formType as (typeof SRD_TYPES)[number]) && formType ? (
                             <option value={formType}>
                               {formatMonsterRuleField('type', formType, locale)}
@@ -1026,6 +1273,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           disabled={pendingAction !== null}
                           onChange={(e) => setFormAlignment(e.target.value)}
                         >
+                          <option value="">{copy.unsetOption}</option>
                           {!SRD_ALIGNMENTS.includes(formAlignment as (typeof SRD_ALIGNMENTS)[number]) && formAlignment ? (
                             <option value={formAlignment}>
                               {formatMonsterRuleField('alignment', formAlignment, locale)}
@@ -1040,7 +1288,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                       </label>
                     </div>
 
-                    {/* Ability Scores editing */}
+                    {/* Ability Scores editing (empty = not set; never sent back) */}
                     <h3>{copy.abilitiesHeading}</h3>
                     <div className="monster-library__abilities-grid">
                       <label className="monster-library__ability-input">
@@ -1049,9 +1297,10 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           type="number"
                           min={1}
                           max={30}
-                          value={formStr}
+                          value={formStr ?? ''}
+                          placeholder={copy.unsetOption}
                           disabled={pendingAction !== null}
-                          onChange={(e) => setFormStr(Number(e.target.value))}
+                          onChange={(e) => setFormStr(e.target.value === '' ? null : Number(e.target.value))}
                         />
                       </label>
                       <label className="monster-library__ability-input">
@@ -1060,9 +1309,10 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           type="number"
                           min={1}
                           max={30}
-                          value={formDex}
+                          value={formDex ?? ''}
+                          placeholder={copy.unsetOption}
                           disabled={pendingAction !== null}
-                          onChange={(e) => setFormDex(Number(e.target.value))}
+                          onChange={(e) => setFormDex(e.target.value === '' ? null : Number(e.target.value))}
                         />
                       </label>
                       <label className="monster-library__ability-input">
@@ -1071,9 +1321,10 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           type="number"
                           min={1}
                           max={30}
-                          value={formCon}
+                          value={formCon ?? ''}
+                          placeholder={copy.unsetOption}
                           disabled={pendingAction !== null}
-                          onChange={(e) => setFormCon(Number(e.target.value))}
+                          onChange={(e) => setFormCon(e.target.value === '' ? null : Number(e.target.value))}
                         />
                       </label>
                       <label className="monster-library__ability-input">
@@ -1082,9 +1333,10 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           type="number"
                           min={1}
                           max={30}
-                          value={formInt}
+                          value={formInt ?? ''}
+                          placeholder={copy.unsetOption}
                           disabled={pendingAction !== null}
-                          onChange={(e) => setFormInt(Number(e.target.value))}
+                          onChange={(e) => setFormInt(e.target.value === '' ? null : Number(e.target.value))}
                         />
                       </label>
                       <label className="monster-library__ability-input">
@@ -1093,9 +1345,10 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           type="number"
                           min={1}
                           max={30}
-                          value={formWis}
+                          value={formWis ?? ''}
+                          placeholder={copy.unsetOption}
                           disabled={pendingAction !== null}
-                          onChange={(e) => setFormWis(Number(e.target.value))}
+                          onChange={(e) => setFormWis(e.target.value === '' ? null : Number(e.target.value))}
                         />
                       </label>
                       <label className="monster-library__ability-input">
@@ -1104,16 +1357,18 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                           type="number"
                           min={1}
                           max={30}
-                          value={formCha}
+                          value={formCha ?? ''}
+                          placeholder={copy.unsetOption}
                           disabled={pendingAction !== null}
-                          onChange={(e) => setFormCha(Number(e.target.value))}
+                          onChange={(e) => setFormCha(e.target.value === '' ? null : Number(e.target.value))}
                         />
                       </label>
                     </div>
 
                     {/* Description editing */}
                     <h3>{copy.descriptionHeading}</h3>
-                    <label>
+                    <label className="monster-library__description-field">
+                      <span>{copy.fieldDescription}</span>
                       <textarea
                         rows={3}
                         value={formDescription}
@@ -1232,9 +1487,9 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
         {/* Modal: Create from zero */}
         {showCreateModal ? (
-          <div className="modal-backdrop">
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="monster-create-modal-title">
             <div className="modal-dialog">
-              <h3>{copy.createModalTitle}</h3>
+              <h3 id="monster-create-modal-title">{copy.createModalTitle}</h3>
               <form onSubmit={handleCreateCustom}>
                 <label>
                   <span>{copy.modalNameRequired}</span>
@@ -1242,6 +1497,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                     type="text"
                     required
                     value={newMonsterName}
+                    autoFocus
                     disabled={pendingAction !== null}
                     onChange={(e) => setNewMonsterName(e.target.value)}
                   />
@@ -1294,15 +1550,16 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
         {/* Modal: Create from Content */}
         {showFromContentModal ? (
-          <div className="modal-backdrop">
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="monster-from-content-modal-title">
             <div className="modal-dialog">
-              <h3>{copy.fromContentModalTitle}</h3>
+              <h3 id="monster-from-content-modal-title">{copy.fromContentModalTitle}</h3>
               <form onSubmit={handleCreateFromContent}>
                 <label>
                   <span>{copy.modalNameOptional}</span>
                   <input
                     type="text"
                     value={fromContentName}
+                    autoFocus
                     placeholder={detail?.name}
                     disabled={pendingAction !== null}
                     onChange={(e) => setFromContentName(e.target.value)}
@@ -1332,15 +1589,16 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
         {/* Modal: Copy Custom */}
         {showCopyModal ? (
-          <div className="modal-backdrop">
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="monster-copy-modal-title">
             <div className="modal-dialog">
-              <h3>{copy.copyModalTitle}</h3>
+              <h3 id="monster-copy-modal-title">{copy.copyModalTitle}</h3>
               <form onSubmit={handleCopyCustom}>
                 <label>
                   <span>{copy.modalNameOptional}</span>
                   <input
                     type="text"
                     value={copyMonsterName}
+                    autoFocus
                     disabled={pendingAction !== null}
                     onChange={(e) => setCopyMonsterName(e.target.value)}
                   />

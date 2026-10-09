@@ -7,17 +7,23 @@ import {
   addMonsterPlacement,
   availableMonsterTemplates,
   buildMonsterPlacementsBody,
+  createPlacementIfFree,
   extractPlacementProblems,
+  findNearestFreePlacementAnchor,
   footprintForSizeName,
+  isPlacementAnchorFree,
+  isRapidPlacementRepeat,
   monsterPlacementsFromMap,
   moveMonsterPlacement,
   placementSourceForRef,
+  PLACEMENT_DOUBLE_CLICK_WINDOW_MS,
   removeMonsterPlacement,
   resolvePlacementTemplate,
   templateRefForPlacement,
   toMonsterPlacementsPayload,
   toggleMonsterPlacementVisibility,
 } from './mapMonsterPlacements'
+import type { WorkingMonsterPlacement } from './mapMonsterPlacements'
 
 const SAVED_ID = '20000000-0000-4000-8000-000000000001'
 const CUSTOM_ID = '30000000-0000-4000-8000-000000000001'
@@ -220,8 +226,7 @@ describe('monster template availability', () => {
   })
 })
 
-describe('placement problem extraction', () => {
-  it('returns problems only for map_monster_placement_invalid with a problems array', () => {
+describe('placement problem extraction', () => {  it('returns problems only for map_monster_placement_invalid with a problems array', () => {
     const problems = [
       { placement_id: SAVED_ID, code: 'overlapping_placement' },
       { placement_id: 'other', code: 'out_of_bounds' },
@@ -250,5 +255,218 @@ describe('placement problem extraction', () => {
       ),
     ).toEqual([])
     expect(extractPlacementProblems(new Error('boom'))).toEqual([])
+  })
+})
+
+describe('nearest free placement anchor (M07-D D6f Copy)', () => {
+  const footprintOf = (ref: string) =>
+    ref === 'large-ref'
+      ? { width: 2, height: 2 }
+      : ref === 'huge-ref'
+        ? { width: 3, height: 3 }
+        : { width: 1, height: 1 }
+
+  function row(
+    clientId: string,
+    templateRef: string,
+    anchor_x: number,
+    anchor_y: number,
+  ): WorkingMonsterPlacement {
+    return { clientId, templateRef, anchor_x, anchor_y, visibility: 'public' }
+  }
+
+  it('chooses the adjacent free cell in deterministic ring order', () => {
+    // Ring 1 from (5, 2) scans dy then dx: (-1,-1) first, so (4, 1) wins.
+    const placements = [row('source', 'goblin', 5, 2)]
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 5, anchor_y: 2 },
+        { width: 1, height: 1 },
+        { widthCells: 12, heightCells: 10 },
+        footprintOf,
+      ),
+    ).toEqual({ anchor_x: 4, anchor_y: 1 })
+  })
+
+  it('skips occupied anchors and out-of-bounds candidates', () => {
+    const placements = [row('source', 'goblin', 0, 0), row('blocker', 'goblin', 1, 0)]
+    // Ring 1 from (0, 0): (-1,-1)/(0,-1)/(1,-1)/(-1,0) are out of bounds,
+    // (1, 0) is occupied, (-1, 1) is out of bounds, so (0, 1) wins.
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 0, anchor_y: 0 },
+        { width: 1, height: 1 },
+        { widthCells: 12, heightCells: 10 },
+        footprintOf,
+      ),
+    ).toEqual({ anchor_x: 0, anchor_y: 1 })
+  })
+
+  it('respects Large footprints: the copy must clear its own source', () => {
+    const placements = [row('source', 'large-ref', 2, 2)]
+    // Every 2x2 anchor within Chebyshev distance 1 overlaps the source
+    // footprint; ring 2 starts at dy=-2, dx=-2, so (0, 0) is the first fit.
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 2, anchor_y: 2 },
+        { width: 2, height: 2 },
+        { widthCells: 6, heightCells: 6 },
+        footprintOf,
+      ),
+    ).toEqual({ anchor_x: 0, anchor_y: 0 })
+  })
+
+  it('respects Huge footprints', () => {
+    const placements = [row('source', 'huge-ref', 3, 3)]
+    // Rings 1-2 all overlap the 3x3 source; ring 3 starts at (0, 0), which
+    // exactly clears it.
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 3, anchor_y: 3 },
+        { width: 3, height: 3 },
+        { widthCells: 8, heightCells: 8 },
+        footprintOf,
+      ),
+    ).toEqual({ anchor_x: 0, anchor_y: 0 })
+  })
+
+  it('returns null when the map is full', () => {
+    const placements = [
+      row('a', 'goblin', 0, 0),
+      row('b', 'goblin', 1, 0),
+      row('c', 'goblin', 0, 1),
+      row('d', 'goblin', 1, 1),
+    ]
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 0, anchor_y: 0 },
+        { width: 1, height: 1 },
+        { widthCells: 2, heightCells: 2 },
+        footprintOf,
+      ),
+    ).toBeNull()
+  })
+
+  it('isPlacementAnchorFree rejects overlap and out-of-bounds footprints', () => {
+    const placements = [row('source', 'large-ref', 2, 2)]
+    const map = { widthCells: 6, heightCells: 6 }
+    expect(
+      isPlacementAnchorFree(
+        placements,
+        { anchor_x: 3, anchor_y: 3 },
+        { width: 1, height: 1 },
+        map,
+        footprintOf,
+      ),
+    ).toBe(false)
+    expect(
+      isPlacementAnchorFree(
+        placements,
+        { anchor_x: 5, anchor_y: 5 },
+        { width: 2, height: 2 },
+        map,
+        footprintOf,
+      ),
+    ).toBe(false)
+    expect(
+      isPlacementAnchorFree(
+        placements,
+        { anchor_x: 0, anchor_y: 0 },
+        { width: 2, height: 2 },
+        map,
+        footprintOf,
+      ),
+    ).toBe(true)
+  })
+})
+
+describe('double-click-safe placement creation (M07-D D6d)', () => {
+  const sizeOf = (ref: string) =>
+    ref === 'large-ref' ? { width: 2, height: 2 } : { width: 1, height: 1 }
+
+  it('creates a row on a free cell', () => {
+    const { placements, created } = createPlacementIfFree(
+      [],
+      { templateRef: 'goblin', anchor_x: 5, anchor_y: 2, visibility: 'public' },
+      sizeOf,
+    )
+    expect(placements).toHaveLength(1)
+    expect(created).toMatchObject({ templateRef: 'goblin', anchor_x: 5, anchor_y: 2 })
+    expect(created!.clientId).toBeTruthy()
+  })
+
+  it('a second create on the same cell before re-render is a no-op returning the same array', () => {
+    const first = createPlacementIfFree(
+      [],
+      { templateRef: 'goblin', anchor_x: 5, anchor_y: 2, visibility: 'public' },
+      sizeOf,
+    )
+    // The stale closure of a rapid second click still sees the old array…
+    const second = createPlacementIfFree(
+      first.placements,
+      { templateRef: 'goblin', anchor_x: 5, anchor_y: 2, visibility: 'public' },
+      sizeOf,
+    )
+    // …but the functional updater path runs against the latest array, so a
+    // double-click never yields two rows.
+    const replayed = createPlacementIfFree(first.placements, {
+      templateRef: 'goblin',
+      anchor_x: 5,
+      anchor_y: 2,
+      visibility: 'public',
+    }, sizeOf)
+    expect(replayed.placements).toBe(first.placements)
+    expect(replayed.created).toBeNull()
+    expect(second.placements).toBe(first.placements)
+  })
+
+  it('respects multi-cell footprints when detecting coverage', () => {
+    const large = createPlacementIfFree(
+      [],
+      { templateRef: 'large-ref', anchor_x: 4, anchor_y: 2, visibility: 'public' },
+      sizeOf,
+    )
+    // (5, 3) is inside the 2x2 footprint anchored at (4, 2).
+    const inside = createPlacementIfFree(large.placements, {
+      templateRef: 'goblin',
+      anchor_x: 5,
+      anchor_y: 3,
+      visibility: 'public',
+    }, sizeOf)
+    expect(inside.created).toBeNull()
+    // (6, 2) is outside it.
+    const outside = createPlacementIfFree(large.placements, {
+      templateRef: 'goblin',
+      anchor_x: 6,
+      anchor_y: 2,
+      visibility: 'public',
+    }, sizeOf)
+    expect(outside.created).not.toBeNull()
+    expect(outside.placements).toHaveLength(2)
+  })
+
+  it('flags a rapid repeat click at (nearly) the same screen point', () => {
+    const stamp = { clientX: 220, clientY: 100, time: 1000 }
+    expect(isRapidPlacementRepeat(null, { clientX: 220, clientY: 100 }, 1100)).toBe(false)
+    expect(isRapidPlacementRepeat(stamp, { clientX: 220, clientY: 100 }, 1100)).toBe(true)
+    // Human double-click drift of a few pixels is suppressed too.
+    expect(isRapidPlacementRepeat(stamp, { clientX: 225, clientY: 103 }, 1100)).toBe(true)
+    // Outside the window, far away (an adjacent cell is 40px at zoom 1),
+    // or from the future, creation proceeds.
+    expect(
+      isRapidPlacementRepeat(
+        stamp,
+        { clientX: 220, clientY: 100 },
+        1000 + PLACEMENT_DOUBLE_CLICK_WINDOW_MS,
+      ),
+    ).toBe(false)
+    expect(isRapidPlacementRepeat(stamp, { clientX: 220, clientY: 100 }, 2000)).toBe(false)
+    expect(isRapidPlacementRepeat(stamp, { clientX: 260, clientY: 100 }, 1100)).toBe(false)
+    expect(isRapidPlacementRepeat(stamp, { clientX: 220, clientY: 100 }, 900)).toBe(false)
   })
 })

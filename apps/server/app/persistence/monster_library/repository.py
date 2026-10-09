@@ -42,6 +42,31 @@ class MonsterLibraryRepository:
             rows = conn.execute(stmt).mappings().all()
             return tuple(_template_from_row(row) for row in rows)
 
+    def list_custom_templates_for_search(
+        self,
+        room_id: UUID,
+        *,
+        include_archived: bool = False,
+        connection: Connection | None = None,
+    ) -> tuple[StoredMonsterTemplate, ...]:
+        """Fetch every custom template of a room for Python-side query matching.
+
+        Name/type matching needs presentation-JSON locale names, which SQL
+        ``ilike`` cannot reach without also matching excluded long-text
+        ``desc`` fields (M07-D D1 F10); room-scoped custom counts stay small.
+        """
+        stmt = select(monster_templates).where(monster_templates.c.room_id == room_id)
+        if not include_archived:
+            stmt = stmt.where(monster_templates.c.archived_at.is_(None))
+        stmt = stmt.order_by(monster_templates.c.name, monster_templates.c.id)
+
+        if connection is not None:
+            rows = connection.execute(stmt).mappings().all()
+            return tuple(_template_from_row(row) for row in rows)
+        with self.engine.connect() as conn:
+            rows = conn.execute(stmt).mappings().all()
+            return tuple(_template_from_row(row) for row in rows)
+
     def get_custom_template(
         self,
         room_id: UUID,

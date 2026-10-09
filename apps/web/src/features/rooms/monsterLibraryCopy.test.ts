@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import { MonsterLibraryApiError } from '../../api/monsterLibrary'
 import {
+  CHALLENGE_RATINGS,
   formatAbilityName,
+  formatChallengeRating,
   formatMonsterName,
   formatMonsterRuleField,
+  formatWalkSpeed,
   monsterLibraryCopy,
   monsterLibraryErrorMessage,
   SRD_ALIGNMENTS,
@@ -69,6 +72,12 @@ describe('monsterLibraryCopy', () => {
         status: 422,
         expectedEn: enCopy.errInvalidMonsterTemplateRef,
         expectedZh: zhCopy.errInvalidMonsterTemplateRef,
+      },
+      {
+        code: 'invalid_monster_library_filter',
+        status: 422,
+        expectedEn: enCopy.errInvalidMonsterLibraryFilter,
+        expectedZh: zhCopy.errInvalidMonsterLibraryFilter,
       },
     ]
 
@@ -159,6 +168,56 @@ describe('monsterLibraryCopy', () => {
 
     expect(formatMonsterRuleField('type', null, 'zh-TW')).toBe('')
     expect(formatMonsterRuleField('type', undefined, 'en')).toBe('')
+  })
+
+  it('exposes every legal challenge rating with fractional labels', () => {
+    expect(CHALLENGE_RATINGS).toEqual([
+      0, 0.125, 0.25, 0.5,
+      ...Array.from({ length: 30 }, (_, index) => index + 1),
+    ])
+    expect(formatChallengeRating(0)).toBe('0')
+    expect(formatChallengeRating(0.125)).toBe('1/8')
+    expect(formatChallengeRating(0.25)).toBe('1/4')
+    expect(formatChallengeRating(0.5)).toBe('1/2')
+    expect(formatChallengeRating(1)).toBe('1')
+    expect(formatChallengeRating(30)).toBe('30')
+  })
+
+  it('formats walk speed in both locales', () => {
+    expect(formatWalkSpeed(30, 'en')).toBe('Speed 30 ft.')
+    expect(formatWalkSpeed(30, 'zh-TW')).toBe('速度 30 ft.')
+  })
+
+  it('labels every D.4 sort and filter control in both locales', () => {
+    for (const locale of ['en', 'zh-TW'] as const) {
+      const copy = monsterLibraryCopy(locale)
+      for (const key of [
+        'sortLabel',
+        'sortName',
+        'sortArmorClass',
+        'sortMaxHp',
+        'sortChallengeRating',
+        'sortWalkSpeed',
+        'orderLabel',
+        'orderAsc',
+        'orderDesc',
+        'filterSizeLabel',
+        'filterTypeLabel',
+        'filterAllOption',
+        'crModeLabel',
+        'crModeAny',
+        'crModeEq',
+        'crModeRange',
+        'crEqLabel',
+        'crMinLabel',
+        'crMaxLabel',
+        'crUnlimitedOption',
+        'errInvalidMonsterLibraryFilter',
+        'errCrRangeInvalid',
+      ] as const) {
+        expect(copy[key]).toBeTruthy()
+      }
+    }
   })
 })
 

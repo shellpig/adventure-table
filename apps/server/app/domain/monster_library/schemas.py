@@ -24,6 +24,7 @@ class MonsterLibrarySummaryView(StrictModel):
     armor_class: int | None = None
     max_hp: int | None = None
     challenge_rating: float | None = None
+    walk_speed: int | None = None
     archived_at: datetime | None = None
     revision: int | None = None
 

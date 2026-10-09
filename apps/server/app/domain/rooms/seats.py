@@ -239,11 +239,11 @@ class SeatService:
             access = self.repository.get_access_session(payload.controller_access_session_id)
             if access is None or access.room_id != room_id or access.revoked_at is not None:
                 raise SeatControllerError("controller access session is not active in this Room")
-            if seat.role == SeatRole.DM.value and access.authority not in {
-                RoomAccessAuthority.DM.value,
-                RoomAccessAuthority.OWNER.value,
-            }:
-                raise SeatControllerError("DM Seat controller requires DM or Owner authority")
+            # M07-D D2b: the DM Seat gameplay role must not be confused with the
+            # target's Room authority. Any active same-Room Human may hold the
+            # DM Seat once assigned; who may assign is gated at the API layer
+            # (Owner-only for DM Seats), and library authoring stays gated on
+            # Room authority, so a member-authority DM still cannot author.
             access_session_id = access.id
         try:
             updated = self.repository.set_controller(

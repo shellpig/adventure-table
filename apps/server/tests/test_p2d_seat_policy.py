@@ -294,21 +294,25 @@ def test_ai_controller_is_domain_shape_only_and_cannot_be_bound_in_p2() -> None:
         )
 
 
-def test_dm_controller_must_have_dm_or_owner_room_authority() -> None:
+def test_dm_controller_may_be_a_member_assigned_through_owner_workflow() -> None:
+    # M07-D D2b (user decision 2026-10-04): the DM Seat gameplay role is not
+    # the target's Room authority. Any active same-Room Human may hold the DM
+    # Seat; who may assign stays Owner-only at the API layer.
     repo = _FakeSeatRepository()
     service = SeatService(repo)
     member = _access(repo, "member")
     dm_seat = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.DM))
-    with pytest.raises(SeatControllerError):
-        service.set_controller(
-            repo.room_id,
-            repo.campaign_id,
-            dm_seat.id,
-            SeatControllerPatch(
-                controller_kind=ControllerKind.HUMAN,
-                controller_access_session_id=member.id,
-            ),
-        )
+    bound = service.set_controller(
+        repo.room_id,
+        repo.campaign_id,
+        dm_seat.id,
+        SeatControllerPatch(
+            controller_kind=ControllerKind.HUMAN,
+            controller_access_session_id=member.id,
+        ),
+    )
+    assert bound.controller_access_session_id == member.id
+    assert bound.controller_authority is RoomAccessAuthority.MEMBER
 
 
 def test_controller_must_be_an_active_access_session_from_same_room() -> None:

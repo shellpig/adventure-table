@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { listMonsterLibrary, MonsterLibraryApiError } from '../../api/monsterLibrary'
-import { formatMonsterName } from './monsterLibraryCopy'
+import { listSessionMonsterLibrary, MonsterLibraryApiError } from '../../api/monsterLibrary'
+import { formatChallengeRating, formatMonsterName } from './monsterLibraryCopy'
 import { useLocale } from '../../i18n/LocaleProvider'
 
 import {
@@ -55,7 +55,9 @@ export function SessionCombatDmControls({
 
   useEffect(() => {
     let active = true
-    void listMonsterLibrary(roomId, token, {
+    // M07-D F14: Session-scoped read-only list, so a non-Owner Human on the
+    // current DM Seat sees custom templates inside the Session.
+    void listSessionMonsterLibrary(roomId, campaignId, sessionId, token, {
       source: 'custom',
       include_archived: false,
     })
@@ -68,7 +70,7 @@ export function SessionCombatDmControls({
             label: localizedName,
             description:
               item.challenge_rating !== null && item.challenge_rating !== undefined
-                ? `CR ${item.challenge_rating}`
+                ? `CR ${formatChallengeRating(item.challenge_rating)}`
                 : undefined,
             searchAliases: localizedName !== item.name ? [item.name, localizedName] : [item.name],
           }
@@ -83,7 +85,8 @@ export function SessionCombatDmControls({
           (typeof cause === 'object' &&
             cause !== null &&
             'code' in cause &&
-            (cause as { code: string }).code === 'monster_library_forbidden')
+            ((cause as { code: string }).code === 'monster_library_forbidden' ||
+              (cause as { code: string }).code === 'table_actor_unauthorized'))
         ) {
           setCustomOptions([])
           return
@@ -94,7 +97,7 @@ export function SessionCombatDmControls({
     return () => {
       active = false
     }
-  }, [roomId, token, locale, onError])
+  }, [roomId, campaignId, sessionId, token, locale, onError])
 
   const combinedMonsterOptions = useMemo(
     () => [...customOptions, ...monsterOptions],

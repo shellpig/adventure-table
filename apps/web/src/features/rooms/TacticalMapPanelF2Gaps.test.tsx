@@ -32,7 +32,7 @@ vi.mock('../../api/tacticalCombat', async (importOriginal) => {
 })
 
 vi.mock('../../api/battleMaps', () => ({
-  getBattleMap: vi.fn().mockResolvedValue(null),
+  getSessionBattleMap: vi.fn().mockResolvedValue(null),
 }))
 
 const baseBoard: tacticalApi.CombatBoardView = {

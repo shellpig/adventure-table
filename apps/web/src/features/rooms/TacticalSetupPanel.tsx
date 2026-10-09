@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import type { BattleMap, BattleMapSummary } from '../../api/battleMaps'
-import { createBattleMap, getBattleMap, listBattleMaps } from '../../api/battleMaps'
+import { createBattleMap, getSessionBattleMap, listSessionBattleMaps } from '../../api/battleMaps'
 import { startTacticalCombat, type TacticalStartInput } from '../../api/tacticalCombat'
 import { SessionApiError } from '../../api/sessions'
 import { BattleMapEditor } from './BattleMapEditor'
@@ -91,14 +91,16 @@ export function TacticalSetupPanel({
   const loadMaps = useCallback(async () => {
     setLoading(true)
     try {
-      const list = await listBattleMaps(roomId, token)
+      // M07-D F14: Session-scoped read-only list, so a non-Owner Human on
+      // the current DM Seat can list the library inside the Session.
+      const list = await listSessionBattleMaps(roomId, campaignId, sessionId, token)
       setMaps(list)
     } catch (cause) {
       onError(cause)
     } finally {
       setLoading(false)
     }
-  }, [roomId, token, onError])
+  }, [roomId, campaignId, sessionId, token, onError])
 
   useEffect(() => {
     void loadMaps()
@@ -127,7 +129,7 @@ export function TacticalSetupPanel({
 
   const handleEdit = async (mapId: string) => {
     try {
-      const map = await getBattleMap(roomId, mapId, token)
+      const map = await getSessionBattleMap(roomId, campaignId, sessionId, mapId, token)
       setEditingMap(map)
     } catch (cause) {
       onError(cause)

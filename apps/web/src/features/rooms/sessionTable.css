@@ -2168,6 +2168,18 @@
   opacity: 1;
 }
 
+/* M07-D D6d: door-state label sits beside the door line (see
+   doorLabelPosition) with a dark halo, so zh-TW/en labels stay legible
+   at normal zoom. paint-order keeps the fill above the halo stroke. */
+.battle-map__door-label {
+  fill: #f7ecd4;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: #070a0f;
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+}
+
 .battle-map__drawing {
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -2242,18 +2254,27 @@
 
 .battle-map__token rect {
   fill: #1a2230;
-  stroke: var(--line);
-  stroke-width: 1.5;
+  stroke: #d8dee9;
+  stroke-width: 2;
 }
 
 .battle-map__token--selected rect {
   stroke: var(--gold-bright);
-  stroke-width: 2;
+  stroke-width: 3;
 }
 
+/* Hidden tokens keep a full-strength outline so the dashes stay readable;
+   only the fill is faded. */
 .battle-map__token--hidden rect {
-  stroke-dasharray: 4 3;
-  opacity: 0.75;
+  stroke-dasharray: 6 4;
+  fill-opacity: 0.6;
+}
+
+/* M07-D D6f: placements stay visible outside monster mode, dimmed and
+   non-interactive so geometry clicks and drags always hit the grid. The
+   hidden dashed marker above still applies on top of the dimming. */
+.battle-map__token--dimmed {
+  opacity: 0.45;
 }
 
 .battle-map__token text {
@@ -2275,8 +2296,8 @@
 
 .battle-map-editor__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
@@ -2284,6 +2305,17 @@
   margin: 0;
   font-size: 1.05rem;
   color: var(--text);
+  white-space: nowrap;
+}
+
+/* Tools sit on the title row; save/close stay pinned to the right. */
+.battle-map-editor__header .battle-map-editor__toolbar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.battle-map-editor__header .battle-map-editor__actions {
+  margin-left: auto;
 }
 
 .battle-map-editor__actions {
@@ -2308,36 +2340,251 @@
 
 .battle-map-editor__terrain-picker {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
   font-size: 0.85rem;
   color: var(--muted);
 }
 
-.battle-map-editor__terrain-picker select {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #0c1017;
-  color: var(--text);
-  font: inherit;
-  min-height: 32px;
-  padding: 4px 8px;
-  font-size: 0.85rem;
+.battle-map-editor__terrain-picker .battle-map-editor__field {
+  flex: 0 1 240px;
+  min-width: min(200px, 100%);
 }
 
 .battle-map-editor__pen-picker {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
+  align-items: flex-end;
+  gap: 10px 16px;
   font-size: 0.85rem;
   color: var(--muted);
 }
 
-.battle-map-editor__pen-picker label {
+.battle-map-editor__pen-picker .battle-map-editor__field--width {
+  flex: 1 1 220px;
+  min-width: min(240px, 100%);
+}
+
+.battle-map-editor__width-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 41px;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.battle-map-editor__width-row input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--gold);
+}
+
+/* M07-D D6d: dark control restyle for the editor picker rows. Mirrors
+   .builder-field (builder.css) and the D6b monster library form: 41px
+   controls, 1px var(--line) border, 10px radius, background #0d1118,
+   focus var(--gold-dark) + soft gold ring, custom select chevron, label
+   above the control in muted .72rem bold. */
+.battle-map-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.battle-map-editor__field > span:first-child {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.battle-map-editor__field input[type='search'],
+.battle-map-editor__field select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 41px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0d1118;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.battle-map-editor__field select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d7b56d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.battle-map-editor__field input[type='search']:focus,
+.battle-map-editor__field select:focus {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 3px rgb(215 181 109 / 8%);
+  background-color: #0f141f;
+  outline: none;
+}
+
+.battle-map-editor__field input[type='search']::placeholder {
+  color: var(--quiet);
+  opacity: 1;
+}
+
+/* M07-D D6e: compact single-row monster panel. No heading block, no hint
+   paragraph, no label-over-control stacks: visible labels are visually-hidden
+   spans (the wrapping labels keep the accessible names), so the row is just
+   the 41px controls and matches the other picker rows. Wraps on narrow
+   widths. Save/problems/messages below add lines only when present. */
+.battle-map-editor__monster-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.battle-map-editor__field-label-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.battle-map-editor__monster-loading {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.battle-map-editor__monster-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.battle-map-editor__monster-picker .battle-map-editor__field {
+  gap: 0;
+}
+
+.battle-map-editor__monster-picker .battle-map-editor__field--search {
+  flex: 1 1 200px;
+  min-width: min(220px, 100%);
+}
+
+.battle-map-editor__monster-picker .battle-map-editor__field--template {
+  flex: 1 1 200px;
+  min-width: min(200px, 100%);
+}
+
+.battle-map-editor__monster-picker .battle-map-editor__field--visibility {
+  flex: 0 1 160px;
+  min-width: 140px;
+}
+
+.battle-map-editor__monster-picker > .button {
+  flex: none;
+  align-self: flex-end;
+  min-height: 41px;
+}
+
+.battle-map-editor__selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.battle-map-editor__selection > span:first-child {
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* M07-D D6d: selected-placement popover anchored next to the token on
+   the canvas. The popover lets canvas clicks through (click-an-empty-
+   cell still moves the selected placement); only the buttons opt back
+   into pointer events so toggle/remove/close stay clickable. */
+.battle-map-editor__placement-popover {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.battle-map-editor__placement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 232px;
+  max-width: 232px;
+  padding: 10px 12px;
+  border: 1px solid var(--gold-dark);
+  border-radius: 10px;
+  background: #0d1118;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 55%);
+  pointer-events: none;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.battle-map-editor__placement-card button {
+  pointer-events: auto;
+}
+
+.battle-map-editor__placement-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.battle-map-editor__placement-card-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.battle-map-editor__placement-card-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.battle-map-editor__placement-card-close:hover {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+}
+
+.battle-map-editor__placement-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .battle-map-editor__swatches {
@@ -2357,18 +2604,6 @@
 .battle-map-editor__swatch--active {
   border-color: var(--gold-bright);
   box-shadow: 0 0 0 2px var(--surface-2), 0 0 0 4px var(--gold-bright);
-}
-
-.battle-map-editor__selection {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface);
-  font-size: 0.85rem;
-  color: var(--muted);
 }
 
 .battle-map-editor__save-message {

@@ -1481,10 +1481,28 @@
 /* ==========================================================================
    Monster Library Styles
    ========================================================================== */
-.monster-library-card {
-  width: min(1200px, 100%);
-  max-width: 1200px;
+.landing-page.monster-library-page {
+  align-items: start;
+  justify-items: stretch;
+}
+
+.landing-card.room-workspace-card.monster-library-card {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  justify-self: stretch;
   text-align: left;
+}
+
+@media (max-width: 480px) {
+  .landing-page.monster-library-page {
+    padding: 16px;
+  }
+}
+
+.monster-library__back {
+  align-self: flex-start;
+  margin-bottom: 16px;
 }
 
 .monster-library__header {
@@ -1514,6 +1532,30 @@
   min-width: 240px;
 }
 
+.monster-library__filter-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.monster-library__filter-label select {
+  max-width: 168px;
+}
+
+.monster-library__filter-error {
+  flex-basis: 100%;
+  margin: 0;
+  border: 1px solid rgb(225 128 128 / 40%);
+  border-radius: 12px;
+  padding: 8px 16px;
+  color: #f3b8b8;
+  background: rgb(225 128 128 / 9%);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .monster-library__checkbox-label {
   display: flex;
   gap: 6px;
@@ -1525,19 +1567,50 @@
 
 .monster-library__layout {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 24px;
+  grid-template-columns:
+    minmax(0, min(var(--monster-library-list-width, 800px), calc(100% - 372px)))
+    12px
+    minmax(0, 1fr);
+  gap: 0;
   min-height: 500px;
+}
+
+.monster-library__splitter {
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.monster-library__splitter::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  background: var(--line);
+  transition: background 150ms ease;
+}
+
+.monster-library__splitter:hover::after,
+.monster-library__splitter:focus-visible::after {
+  background: var(--gold-bright);
 }
 
 @media (max-width: 840px) {
   .monster-library__layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .monster-library__splitter {
+    display: none;
   }
 }
 
 .monster-library__sidebar {
-  border-right: 1px solid var(--line);
   padding-right: 16px;
   max-height: 75vh;
   overflow-y: auto;
@@ -1547,8 +1620,8 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 8px;
 }
 
@@ -1601,6 +1674,7 @@
 .monster-library__item-meta {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
   font-size: 0.82rem;
   color: var(--muted);
 }
@@ -1652,13 +1726,30 @@
 }
 
 .monster-library__stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
   padding: 14px;
   background: var(--surface-2);
   border-radius: 8px;
+}
+
+.monster-library__stat-block .monster-library__stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* The detail panel width follows the list splitter, not the viewport. */
+.monster-library__stat-block .monster-library__stats-grid {
+  container-type: inline-size;
+}
+
+@container (max-width: 680px) {
+  .monster-library__stat-block .monster-library__stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .monster-library__abilities-grid {
@@ -1752,10 +1843,34 @@
 }
 
 /* Battle Map Library */
+/* The list view is sized for five map cards per row; the editor uses the
+   full screen width for the canvas. */
 .battle-map-library {
-  max-width: 1000px;
+  max-width: 1520px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 24px;
+}
+
+.battle-map-library.battle-map-library--editing {
+  max-width: none;
+}
+
+.battle-map-library--editing .page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin-bottom: 16px;
+}
+
+.battle-map-library--editing .page-header h1 {
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .battle-map-library {
+    padding: 24px 16px;
+  }
 }
 
 .battle-map-library__toolbar {
@@ -1792,8 +1907,14 @@
 
 .battle-map-library__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
+}
+
+@media (min-width: 1440px) {
+  .battle-map-library__grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 .battle-map-card {
@@ -1841,3 +1962,306 @@
   border-top: 1px solid var(--line-soft);
 }
 
+
+/* Modal dialogs shared by the Monster Library and Battle Map Library pages.
+   Scoped under .modal-backdrop so shared card rules (text-align:center etc.)
+   cannot leak into the dialog content. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(4 6 10 / 76%);
+  backdrop-filter: blur(8px);
+}
+
+.modal-backdrop .modal-dialog,
+.modal-backdrop .modal-card {
+  display: grid;
+  gap: 14px;
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  color: inherit;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.modal-backdrop .modal-dialog h3,
+.modal-backdrop .modal-card h3 {
+  margin: 0;
+  color: var(--gold-bright);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+}
+
+.modal-backdrop .modal-dialog form,
+.modal-backdrop .modal-card form {
+  display: grid;
+  gap: 14px;
+}
+
+.modal-backdrop .modal-dialog label,
+.modal-backdrop .modal-card label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: .8rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.modal-backdrop .modal-dialog input:not([type="checkbox"]):not([type="radio"]),
+.modal-backdrop .modal-dialog select,
+.modal-backdrop .modal-dialog textarea,
+.modal-backdrop .modal-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.modal-backdrop .modal-card select,
+.modal-backdrop .modal-card textarea {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.modal-backdrop .modal-card__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.modal-backdrop .modal-actions,
+.modal-backdrop .modal-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ==========================================================================
+   M07-D D6b: Monster Library custom-editor + filter bar dark restyle.
+   Mirrors .builder-field (builder.css) for inputs/textareas/labels and
+   .room-field (rooms.css ~92-140) for selects. Every rule is scoped under
+   .landing-card.room-workspace-card.monster-library-card so later shared
+   .landing-* rules cannot override the page. No palette of its own: only
+   var(--line), var(--line-soft), var(--text), var(--muted), var(--quiet),
+   var(--gold-dark) and rgb(215 181 109 / ...) are used.
+   ========================================================================== */
+
+/* --- Overflow containment: the detail panel must never scroll sideways. --- */
+.landing-card.room-workspace-card.monster-library-card .monster-library__detail {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__detail-body {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* --- Shared dark control base (mirrors .builder-field inputs/textareas). --- */
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form input:not([type="checkbox"]):not([type="radio"]),
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form select,
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form textarea,
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters input[type="search"],
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0d1118;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.92rem;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form input:not([type="checkbox"]):not([type="radio"]),
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form select {
+  height: 41px;
+  padding: 0 11px;
+}
+
+/* Select chevron mirrors .room-field select. */
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form select,
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d7b56d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form input:not([type="checkbox"]):not([type="radio"]):focus,
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form select:focus,
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form textarea:focus,
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters input[type="search"]:focus,
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters select:focus {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 3px rgb(215 181 109 / 8%);
+  background-color: #0f141f;
+  outline: none;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form input::placeholder,
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form textarea::placeholder,
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters input[type="search"]::placeholder {
+  color: var(--quiet);
+  opacity: 1;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form textarea,
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters textarea {
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+/* --- Core stats grid: label above control, equal cells, same heights. --- */
+.landing-card.room-workspace-card.monster-library-card .monster-library__form-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+  min-width: 0;
+  width: 100%;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__form-grid > label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Field labels mirror .builder-field > span. */
+.landing-card.room-workspace-card.monster-library-card .monster-library__form-grid > label > span,
+.landing-card.room-workspace-card.monster-library-card .monster-library__ability-input > span,
+.landing-card.room-workspace-card.monster-library-card .monster-library__description-field > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* --- Ability scores: 6 compact cells in a row, wrapping when narrow. --- */
+.landing-card.room-workspace-card.monster-library-card .monster-library__custom-form .monster-library__abilities-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(110px, 100%), 1fr));
+  min-width: 0;
+  width: 100%;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__ability-input {
+  gap: 6px;
+  min-width: 0;
+}
+
+/* --- Description: full-width, non-monospace, room to write. --- */
+.landing-card.room-workspace-card.monster-library-card .monster-library__description-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__description-field textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 120px;
+  padding: 10px 11px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* --- Trait/action rows: card blocks, name top-left, remove top-right,
+       full-width non-monospace textarea below. --- */
+.landing-card.room-workspace-card.monster-library-card .monster-library__item-edit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name remove"
+    "desc desc";
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__item-edit-row > input {
+  grid-area: name;
+  width: 100%;
+  min-width: 0;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__item-edit-row > textarea {
+  grid-area: desc;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 72px;
+  padding: 10px 11px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__item-edit-row > button {
+  grid-area: remove;
+  justify-self: end;
+  align-self: start;
+}
+
+/* --- Filter bar: same dark controls, compact row height, tidy wrap. --- */
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters input[type="search"] {
+  flex: 1 1 220px;
+  min-width: min(240px, 100%);
+  height: 38px;
+  padding: 0 11px;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters select {
+  width: auto;
+  height: 38px;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 11px;
+  font-size: 0.88rem;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters .monster-library__filter-label select {
+  max-width: 168px;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters .monster-library__filter-label > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.landing-card.room-workspace-card.monster-library-card .monster-library__filters .monster-library__checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--gold);
+  flex: none;
+}

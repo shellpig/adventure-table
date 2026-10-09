@@ -44,6 +44,11 @@ from app.domain.campaign_runtime.errors import (
 from app.domain.campaign_runtime.service import (
     CampaignRuntimeService,
 )
+from app.domain.monster_library.errors import (
+    InvalidMonsterTemplateRefError,
+    MonsterTemplateArchivedError,
+    MonsterTemplateNotFoundError,
+)
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
@@ -62,6 +67,13 @@ router = APIRouter(
 def map_campaign_runtime_error(exc: Exception) -> APIError:
     if isinstance(exc, APIError):
         return exc
+    # M07-D D1 (F07): monster template errors share the M07-A machine codes.
+    if isinstance(exc, MonsterTemplateNotFoundError):
+        return APIError(404, "monster_template_not_found", str(exc))
+    if isinstance(exc, MonsterTemplateArchivedError):
+        return APIError(409, "monster_template_archived", str(exc))
+    if isinstance(exc, InvalidMonsterTemplateRefError):
+        return APIError(422, "invalid_monster_template_ref", str(exc))
     if isinstance(exc, (CampaignRuntimeAuthorityError, TableEventActorUnauthorizedError)):
         return APIError(403, "campaign_runtime_forbidden", str(exc))
     if isinstance(exc, (CampaignRuntimeNotFoundError, TableEventNotFoundError)):

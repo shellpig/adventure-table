@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from typing import Annotated, Literal
-from pydantic import Field, TypeAdapter, ValidationError
+from pydantic import Field, TypeAdapter, ValidationError, field_validator
 
+from app.domain.monster_library.references import normalize_monster_template_ref
 from app.domain.rooms.schemas import StrictModel
 
 
@@ -27,6 +28,15 @@ class NpcPayload(StrictModel):
     disposition: Literal["friendly", "neutral", "hostile", "unknown"] = "unknown"
     monster_template_ref: str | None = None
 
+    @field_validator("monster_template_ref")
+    @classmethod
+    def _canonicalize_monster_template_ref(cls, value: str | None) -> str | None:
+        # M07-D D1 (F04): persist custom refs canonically so the deletion
+        # reference scan cannot be bypassed by UUID spelling variants.
+        if value is None:
+            return None
+        return normalize_monster_template_ref(value)
+
 
 class ItemPayload(StrictModel):
     kind: Literal["item"] = "item"
@@ -40,6 +50,14 @@ class MonsterRefPayload(StrictModel):
     monster_template_ref: str = Field(min_length=1)
     count: int = Field(default=1, ge=1)
     notes: str | None = None
+
+    @field_validator("monster_template_ref")
+    @classmethod
+    def _canonicalize_monster_template_ref(cls, value: str) -> str:
+        # M07-D D1 (F04): see NpcPayload.
+        canonical = normalize_monster_template_ref(value)
+        assert canonical is not None
+        return canonical
 
 
 class QuestPayload(StrictModel):

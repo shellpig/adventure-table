@@ -137,6 +137,23 @@ class BattleMapRepository:
             row = conn.execute(query).mappings().one_or_none()
             return StoredBattleMap(**dict(row)) if row is not None else None
 
+    def get_map_with_objects_for_update(
+        self,
+        connection: Connection,
+        room_id: UUID,
+        map_id: UUID,
+    ) -> tuple[StoredBattleMap, StoredBattleMapObjects] | None:
+        """Lock the map row, then read metadata and objects at that one point (M07-D D1 F08).
+
+        The ``FOR UPDATE`` lock serializes against concurrent map/objects
+        edits for the rest of the caller's transaction, so the frozen board
+        geometry and the monster placement validation always agree.
+        """
+        stored = self.get_map(room_id, map_id, connection=connection, for_update=True)
+        if stored is None:
+            return None
+        return stored, self.get_objects(stored.id, connection=connection)
+
     def list_maps(
         self, room_id: UUID, *, include_archived: bool = False
     ) -> tuple[StoredBattleMap, ...]:

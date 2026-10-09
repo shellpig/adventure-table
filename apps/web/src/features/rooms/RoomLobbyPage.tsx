@@ -161,9 +161,11 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
   const selectedCharacterName = (seat: CampaignSeat) =>
     characters.find((character) => character.id === seat.selected_character_id)?.name ?? copy.noCharacter
 
+  // M07-D D2b: the Start right follows the DM Seat controller binding, not the
+  // caller's Room authority. An Owner-assigned member holding the DM Seat
+  // starts normally; anyone not on the DM Seat sees no Start control.
   const canStartSession = (
     activeSession === null &&
-    (authority === 'dm' || authority === 'owner') &&
     snapshot.seats.some((seat) => (
       seat.role === 'dm' &&
       seat.controller_kind === 'human' &&
@@ -244,9 +246,11 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
             const canManageSeat = seat.role === 'dm' ? isOwner : canManage
             const unavailableCharacterIds = selectedElsewhere(seat)
             const choices = eligibleCharacters.filter((item) => !unavailableCharacterIds.has(item.id))
-            const controllerChoices = seat.role === 'dm'
-              ? snapshot.controllers.filter((item) => item.authority === 'dm' || item.authority === 'owner')
-              : snapshot.controllers
+            // M07-D D2b: the Owner assigns the DM Seat controller from every
+            // active same-Room access session (Seat gameplay role is not the
+            // target's Room authority). Owner-only assignment is enforced by
+            // the server; the dropdown only chooses among eligible people.
+            const controllerChoices = snapshot.controllers
             const controllerLabel = seat.controller_kind === 'ai'
               ? copy.aiDmController
               : (seat.controller_display_name || copy.unassigned)

@@ -245,6 +245,41 @@ export function getBattleMap(
   return request(`${battleMapsBase(roomId)}/${mapId}`, token)
 }
 
+const sessionLibrariesBase = (
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+) => `/api/rooms/${roomId}/campaigns/${campaignId}/sessions/${sessionId}/libraries`
+
+/**
+ * M07-D D2 (F14): Session-scoped read-only map reads for the current DM.
+ * Same response models as the management routes; usable by a non-Owner
+ * Human sitting on the current DM Seat.
+ */
+export function listSessionBattleMaps(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+  options?: ListBattleMapsOptions,
+): Promise<BattleMapSummary[]> {
+  const query = options?.includeArchived ? '?include_archived=true' : ''
+  return request(`${sessionLibrariesBase(roomId, campaignId, sessionId)}/battle-maps${query}`, token)
+}
+
+export function getSessionBattleMap(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  mapId: string,
+  token: string,
+): Promise<BattleMap> {
+  return request(
+    `${sessionLibrariesBase(roomId, campaignId, sessionId)}/battle-maps/${mapId}`,
+    token,
+  )
+}
+
 export function patchBattleMap(
   roomId: string,
   mapId: string,

@@ -32,6 +32,7 @@ from app.domain.campaign_runtime.payloads import (
     parse_runtime_payload,
 )
 from app.domain.monster_library.references import (
+    canonicalize_state_monster_ref,
     validate_custom_monster_template_ref,
 )
 from app.domain.campaign_runtime.schemas import (
@@ -215,7 +216,9 @@ def _prepare_create_entry(
         kind=payload.kind,
         title=payload.title,
         body=payload.body,
-        state_json=payload.state,
+        # M07-D D1 (F04): raw state dicts are canonicalized so stored
+        # custom refs always use the lowercase-UUID spelling.
+        state_json=canonicalize_state_monster_ref(payload.state) or {},
         dm_notes=payload.dm_notes,
         visibility=payload.visibility,
         needs_review=payload.needs_review,

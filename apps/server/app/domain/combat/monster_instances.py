@@ -17,9 +17,8 @@ from app.content.registry import ContentRegistry
 from app.domain.combat.lifecycle import CombatNotFoundError
 from app.domain.combat.resolution import DamageType
 from app.domain.combat.spell_resources import monster_casting_sources
-from app.domain.monster_library.errors import (
-    MonsterTemplateArchivedError,
-    MonsterTemplateNotFoundError,
+from app.domain.monster_library.references import (
+    validate_custom_monster_template_ref,
 )
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
@@ -251,31 +250,36 @@ class MonsterInstanceService:
             return stored_to_monster_instance_view(existing)
 
         content_key = input_data.content_key.strip()
-        if content_key.startswith("custom:"):
-            raw_uuid = content_key.removeprefix("custom:").strip()
-            try:
-                template_id = UUID(raw_uuid)
-            except ValueError as exc:
-                raise ValueError(f"invalid custom monster template id: '{content_key}'") from exc
-
-            template = self.monster_repository.get_template(template_id)
-            if template is None:
-                raise MonsterTemplateNotFoundError(f"custom monster template '{template_id}' not found")
-            if template.room_id != actor.room_id:
-                raise MonsterTemplateNotFoundError(
-                    f"custom monster template '{template_id}' not found in room '{actor.room_id}'"
+        # M07-D D1 (F04): the scheme prefix matches case-insensitively so
+        # non-standard spellings route into validation instead of slipping
+        # through as opaque built-in keys.
+        if content_key[: len("custom:")].casefold() == "custom:":
+            # M07-D D1 (F05/F08): lock the template row, verify room/scope,
+            # seed spell resources, and insert the Instance in one transaction.
+            # validate_custom_monster_template_ref raises the mapped domain
+            # errors (404/409/422) while holding the row lock.
+            with self.monster_repository.engine.begin() as connection:
+                template_id = validate_custom_monster_template_ref(
+                    connection,
+                    room_id=actor.room_id,
+                    ref=content_key,
                 )
-            if template.archived_at is not None:
-                raise MonsterTemplateArchivedError(f"monster template '{template_id}' is archived")
-
-            stored = self.monster_repository.create_instance_from_template(
-                template.id,
-                campaign_id=actor.campaign_id,
-                name=input_data.name,
-                instance_id=instance_id,
-                visibility=input_data.visibility,
-                position_note=input_data.position_note,
-            )
+                assert template_id is not None
+                template = self.monster_repository.get_template_in_transaction(
+                    connection, template_id
+                )
+                assert template is not None
+                stored = self.monster_repository.create_instance_from_template_in_transaction(
+                    connection,
+                    template_id,
+                    campaign_id=actor.campaign_id,
+                    room_id=actor.room_id,
+                    name=input_data.name,
+                    instance_id=instance_id,
+                    resources=initial_monster_resources(template.rules),
+                    visibility=input_data.visibility,
+                    position_note=input_data.position_note,
+                )
             return stored_to_monster_instance_view(stored)
 
         # Built-in content key

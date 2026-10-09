@@ -15,6 +15,7 @@ import {
   nearestGridSegment,
   placementLine,
   resizedCanvasHeight,
+  viewportFillCanvasHeight,
   roundCellCoord,
   setTerrain,
   snapToVertex,
@@ -190,6 +191,18 @@ describe('BattleMapEditor working state', () => {
     expect(resizedCanvasHeight(520, 200)).toBe(720)
     expect(resizedCanvasHeight(520, -100)).toBe(420)
     expect(resizedCanvasHeight(520, -400)).toBe(320)
+  })
+
+  it('viewportFillCanvasHeight reaches the viewport bottom but never drops below the default', () => {
+    expect(viewportFillCanvasHeight(120, 950)).toBe(758)
+    expect(viewportFillCanvasHeight(300, 720)).toBe(520)
+  })
+
+  it('only the Map Library opens the editor stretched to the viewport bottom', () => {
+    const library = readFileSync(new URL('./RoomBattleMapLibraryPage.tsx', import.meta.url), 'utf-8')
+    const setup = readFileSync(new URL('./TacticalSetupPanel.tsx', import.meta.url), 'utf-8')
+    expect(library).toContain('fillViewportHeight')
+    expect(setup).not.toContain('fillViewportHeight')
   })
 
   it('new strokes carry the pen colour and width in the saved payload', () => {
@@ -451,7 +464,7 @@ describe('M07-C BattleMapEditor monster placements', () => {
 
   it('saves placements through PUT monster-placements with expected_revision', () => {
     expect(source).toContain('replaceMonsterPlacements(')
-    expect(source).toContain('buildMonsterPlacementsBody(map.revision, placements)')
+    expect(source).toContain('buildMonsterPlacementsBody(map.revision, inFlight)')
     expect(source).toContain('monsterPlacementsFromMap(saved.monster_placements ?? [])')
   })
 
@@ -537,5 +550,279 @@ describe('M07-C BattleMapEditor monster placements', () => {
     expect(source).toContain('toggleMonsterPlacementVisibility(prev, selectedPlacementId)')
     expect(source).toContain('removeMonsterPlacement(prev, selectedPlacementId)')
     expect(source).toContain('moveMonsterPlacement(prev, selectedPlacementId, x, y)')
+  })
+
+  it('M07-D F16: geometry mouse handlers do nothing in monster mode', () => {
+    // Click/drag paint paths return before the tool switch; a drag that
+    // started earlier is cancelled instead of landing a wall/door/drawing.
+    expect(source).toContain('if (monsterMode) return')
+    expect(source).toContain('onCellClick={handleCanvasCellClick}')
+    expect(source).toContain('if (monsterMode) {')
+    expect(source).toContain('handleMonsterCellClick(x, y, point)')
+    // Monster-mode entry still clears geometry highlight state.
+    expect(source).toContain('setPreviewLine(null)')
+  })
+
+  it('M07-D F17: a save response never clobbers edits made mid-flight', () => {
+    // Reference snapshot at save start; only an unchanged working state is
+    // overwritten, otherwise the newer edits are kept and flagged unsaved.
+    expect(source).toContain('placementsRef')
+    expect(source).toContain('const inFlight = placementsRef.current')
+    expect(source).toContain('if (placementsRef.current !== inFlight) {')
+    expect(source).toContain('monsterPlacementUnsavedChanges')
+    // The parent still gets the bumped revision so the next save succeeds.
+    const saveBlock = source.slice(source.indexOf('const handleSavePlacements'))
+    const onSavedIdx = saveBlock.indexOf('onSaved(saved)')
+    const guardIdx = saveBlock.indexOf('placementsRef.current !== inFlight')
+    expect(onSavedIdx).toBeGreaterThan(-1)
+    expect(guardIdx).toBeGreaterThan(-1)
+    expect(onSavedIdx).toBeLessThan(guardIdx)
+  })
+
+  it('M07-D F19: placements move by drag, click-to-move stays as the alternative', () => {
+    expect(source).toContain('handlePlacementTokenPointerDown')
+    expect(source).toContain('handlePlacementCellPointerEnter')
+    expect(source).toContain('handlePlacementPointerUp')
+    expect(source).toContain('onTokenPointerDown={monsterMode ? handlePlacementTokenPointerDown : undefined}')
+    expect(source).toContain('onCellPointerEnter={monsterMode ? handlePlacementCellPointerEnter : undefined}')
+    expect(source).toContain('onPointerUp={monsterMode ? handlePlacementPointerUp : undefined}')
+    // A release outside the SVG never reaches it, so a global release clears
+    // the armed drag (cleaned up); leaving Monster mode disarms it too.
+    expect(source).toContain("window.addEventListener('pointerup', clearDrag)")
+    expect(source).toContain("window.addEventListener('pointercancel', clearDrag)")
+    expect(source).toContain("window.removeEventListener('pointerup', clearDrag)")
+    // Drag writes the same working state as click-move (footprint preview
+    // and server-side save validation are shared).
+    expect(source).toContain('moveMonsterPlacement(prev, dragging.clientId, x, y)')
+    expect(source).toContain('moveMonsterPlacement(prev, selectedPlacementId, x, y)')
+  })
+
+  it('M07-D F13: image maps expose grid alignment with save, and render aligned', () => {    expect(source).toContain('data-testid="map-grid-panel"')
+    expect(source).toContain('data-testid="map-grid-size"')
+    expect(source).toContain('data-testid="map-grid-offset-x"')
+    expect(source).toContain('data-testid="map-grid-offset-y"')
+    expect(source).toContain('data-testid="map-grid-save"')
+    expect(source).toContain('data-testid="map-grid-save-message"')
+    expect(source).toContain('patchBattleMap(roomId, map.id, body, token)')
+    expect(source).toContain("map.source_kind === 'image'")
+    expect(source).toContain('imageRect={imageRect}')
+    // Draft fields preview before Save (parsed draft drives the rect) and the
+    // save persists those exact effective values (blank offsets become 0).
+    expect(source).toContain('parseGridPixelSizeInput(gridSize)')
+    expect(source).toContain('rawOffsetX ?? 0')
+  })
+})
+
+describe('M07-D D6e monster-mode usability', () => {
+  const source = readFileSync(new URL('./BattleMapEditor.tsx', import.meta.url), 'utf8')
+
+  it('pushPlacementHistory appends and caps at 50, popPlacementHistory rewinds one step', async () => {
+    const { pushPlacementHistory, popPlacementHistory, PLACEMENT_HISTORY_LIMIT } =
+      await import('./mapMonsterPlacements')
+    type WorkingMonsterPlacement =
+      import('./mapMonsterPlacements').WorkingMonsterPlacement
+    expect(PLACEMENT_HISTORY_LIMIT).toBe(50)
+    const row = (n: number): WorkingMonsterPlacement => ({ clientId: `p-${n}`, templateRef: 't', anchor_x: n, anchor_y: 0, visibility: 'public' })
+    let history: WorkingMonsterPlacement[][] = []
+    expect(popPlacementHistory(history)).toBeNull()
+    history = pushPlacementHistory(history, [])
+    history = pushPlacementHistory(history, [row(1)])
+    expect(history).toHaveLength(2)
+    const popped = popPlacementHistory(history)!
+    expect(popped.placements).toEqual([row(1)])
+    expect(popped.history).toEqual([[]])
+    // Overflow drops the oldest entries first.
+    let capped: WorkingMonsterPlacement[][] = []
+    for (let n = 0; n < 55; n += 1) capped = pushPlacementHistory(capped, [row(n)])
+    expect(capped).toHaveLength(50)
+    expect(capped[0]).toEqual([row(5)])
+    expect(capped[49]).toEqual([row(54)])
+    // A consecutive push of the identical reference collapses (StrictMode
+    // double-invokes the editor updater with the same pre-edit array).
+    const before = [row(7)]
+    const once = pushPlacementHistory([], before)
+    expect(pushPlacementHistory(once, before)).toBe(once)
+    expect(pushPlacementHistory(once, [row(7)])).toHaveLength(2)
+  })
+
+  it('sameMonsterPlacements tells real edits from no-op updater results', async () => {
+    const { sameMonsterPlacements, moveMonsterPlacement } = await import('./mapMonsterPlacements')
+    const before = [
+      { clientId: 'p-1', templateRef: 't', anchor_x: 5, anchor_y: 2, visibility: 'public' as const },
+    ]
+    // Helpers always build a new array, so the editor compares content.
+    expect(sameMonsterPlacements(before, [...before])).toBe(true)
+    expect(sameMonsterPlacements(before, moveMonsterPlacement(before, 'p-1', 5, 2))).toBe(true)
+    expect(sameMonsterPlacements(before, moveMonsterPlacement(before, 'no-such-id', 5, 2))).toBe(true)
+    expect(sameMonsterPlacements(before, moveMonsterPlacement(before, 'p-1', 7, 2))).toBe(false)
+    expect(sameMonsterPlacements(before, [])).toBe(false)
+  })
+
+  it('place, drag (one step), and undo rewind through the helper contract', async () => {
+    const {
+      createPlacementIfFree,
+      moveMonsterPlacement,
+      pushPlacementHistory,
+      popPlacementHistory,
+      sameMonsterPlacements,
+    } = await import('./mapMonsterPlacements')
+    type WorkingMonsterPlacement =
+      import('./mapMonsterPlacements').WorkingMonsterPlacement
+    const sizeOf = () => ({ width: 1, height: 1 })
+    const draft = { templateRef: 'srd5.1:monster:goblin', anchor_x: 5, anchor_y: 2, visibility: 'public' as const }
+    // Place pushes the empty array (create on a covered cell is a no-op that
+    // returns the identical reference, so it would push nothing).
+    const empty: WorkingMonsterPlacement[] = []
+    const created = createPlacementIfFree(empty, draft, sizeOf)
+    expect(created.created).not.toBeNull()
+    expect(createPlacementIfFree(created.placements, draft, sizeOf).placements).toBe(created.placements)
+    let history = pushPlacementHistory([], empty)
+    // A drag pushes its pre-drag snapshot once, then applies every cell move.
+    const id = created.created!.clientId
+    history = pushPlacementHistory(history, created.placements)
+    const mid = moveMonsterPlacement(created.placements, id, 6, 2)
+    const end = moveMonsterPlacement(mid, id, 8, 2)
+    expect(end[0]).toMatchObject({ anchor_x: 8, anchor_y: 2 })
+    // First undo restores the pre-drag position in a single step.
+    let popped = popPlacementHistory(history)!
+    expect(popped.placements).toBe(created.placements)
+    expect(sameMonsterPlacements(popped.placements, created.placements)).toBe(true)
+    // Second undo removes the placement; the stack is then empty.
+    popped = popPlacementHistory(popped.history)!
+    expect(popped.placements).toEqual([])
+    expect(popPlacementHistory(popped.history)).toBeNull()
+  })
+
+  it('geometry tool buttons stay enabled in monster mode and switch in one click', () => {
+    // No geometry toolbar button may be disabled by monster mode anymore.
+    expect(source).not.toContain('disabled={monsterMode}')
+    const toolbar = source.slice(source.indexOf('{TOOLS.map((t)'))
+    expect(toolbar).toContain('if (monsterMode) leaveMonsterMode()')
+    expect(toolbar).toContain('selectTool(t)')
+    // The shared exit clears selection/popover and disarms drags, but keeps
+    // placements (and their history) so unsaved edits survive the switch.
+    const leaveStart = source.indexOf('const leaveMonsterMode')
+    const leaveEnd = source.indexOf('}, [])', leaveStart)
+    const leave = source.slice(leaveStart, leaveEnd)
+    expect(leave).toContain('dragPlacementRef.current = null')
+    expect(leave).toContain('setMonsterMode(false)')
+    expect(leave).toContain('setSelectedPlacementId(null)')
+    expect(leave).not.toContain('setPlacements(')
+    expect(leave).not.toContain('setPlacementHistory(')
+  })
+
+  it('tool-specific rows follow the active mode', () => {
+    expect(source).toContain("tool === 'terrain' && !monsterMode")
+    expect(source).toContain("tool === 'draw' && !monsterMode")
+    expect(source).toContain('selectedItem && !monsterMode')
+    // The monster panel still renders only in monster mode.
+    expect(source).toContain('data-testid="monster-placement-panel"')
+    expect(source).toContain('{monsterMode ? (')
+  })
+
+  it('undo follows the active mode and the button enables per mode', () => {
+    const undo = source.slice(source.indexOf('const handleUndo'))
+    expect(undo).toContain('if (monsterMode)')
+    expect(undo).toContain('popPlacementHistory(h)')
+    expect(undo).toContain('setPlacements(popped.placements)')
+    // A rewound place drops the orphaned selection; move-undos keep it.
+    expect(undo).toContain('setSelectedPlacementId(null)')
+    expect(source).toContain('disabled={monsterMode ? placementHistory.length === 0 : history.length === 0}')
+    // Ctrl/Cmd+Z keeps the shared input guard and routes through handleUndo.
+    expect(source).toContain('shouldTriggerEditorUndo(e)')
+  })
+
+  it('a token drag records exactly one undo step', () => {
+    expect(source).toContain('snapshot: placementsRef.current')
+    expect(source).toContain('historyPushed')
+    // Pushed once on the first cell that actually moves the token.
+    expect(source).toContain('pushPlacementHistoryEntry(dragging.snapshot)')
+    // Every other placement mutation pushes through the shared wrapper.
+    expect(source).toContain('const updatePlacements = useCallback')
+    expect(source).toContain('sameMonsterPlacements(prev, next)')
+  })
+
+  it('a clean placement save clears the undo stack like the geometry save', () => {
+    expect(source).toContain('setPlacementHistory([])')
+    const save = source.slice(source.indexOf('const handleSavePlacements'))
+    expect(save).toContain('placementsRef.current !== inFlight')
+    expect(save).toContain('setPlacementHistory([])')
+    expect(source).toContain('setHistory([])')
+  })
+
+  it('the monster panel is one compact row keeping every behaviour testid', () => {
+    // No heading block, no hint paragraph.
+    expect(source).not.toContain('<h4>{libraryCopy.monsterPlacementsHeading}</h4>')
+    expect(source).not.toContain('<p>{libraryCopy.monsterPlacementsHint}</p>')
+    // Heading and hint survive as accessible name and tooltip.
+    expect(source).toContain('aria-label={libraryCopy.monsterPlacementsHeading}')
+    expect(source).toContain('title={libraryCopy.monsterPlacementsHint}')
+    // Labels are visually hidden; wrapping labels keep the accessible names.
+    expect(source).toContain('battle-map-editor__field-label-sr')
+    const css = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(css).toContain('.battle-map-editor__field-label-sr')
+    // Every behaviour testid is unchanged.
+    for (const testid of [
+      'monster-placement-panel',
+      'monster-placement-template-search',
+      'monster-placement-template-picker',
+      'monster-placement-visibility-picker',
+      'monster-placement-save',
+    ]) {
+      expect(source).toContain(`data-testid="${testid}"`)
+    }
+  })
+})
+
+describe('M07-D D6d map editor monster-placement UX fixes', () => {
+  const source = readFileSync(new URL('./BattleMapEditor.tsx', import.meta.url), 'utf8')
+
+  it('renders the selection as a canvas popover keeping every behaviour testid', () => {
+    // Popover root keeps the selection testid so existing assertions hold.
+    expect(source).toContain('data-testid="monster-placement-selection"')
+    expect(source).toContain('data-testid="monster-placement-toggle-hidden"')
+    expect(source).toContain('data-testid="monster-placement-remove"')
+    expect(source).toContain('data-testid="monster-placement-popover-close"')
+    // The popover lives inside the canvas wrap, positioned from the token.
+    expect(source).toContain('data-testid="monster-placement-popover"')
+    expect(source).toContain('placementPopoverPosition(tokenRect, canvasWrapSize')
+    expect(source).toContain('placementTokenScreenRect(')
+    // Clicks pass through to the canvas; only buttons opt back in (CSS).
+    const css = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(css).toContain('.battle-map-editor__placement-popover')
+    expect(css).toContain('.battle-map-editor__placement-card button')
+  })
+
+  it('deselects via token re-click, popover close, and Escape', () => {
+    // Token click still toggles (re-click deselects).
+    expect(source).toContain('setSelectedPlacementId((prev) => (prev === clientId ? null : clientId))')
+    expect(source).toContain('onClick={() => setSelectedPlacementId(null)}')
+    expect(source).toContain("if (e.key === 'Escape')")
+    const escapeBlock = source.slice(source.indexOf("if (e.key === 'Escape')"))
+    expect(escapeBlock).toContain('setSelectedPlacementId(null)')
+    // Clicking an empty cell while selected still moves (unchanged).
+    expect(source).toContain('moveMonsterPlacement(prev, selectedPlacementId, x, y)')
+  })
+
+  it('arms placement drags past a pointer threshold so clicks never move tokens', () => {
+    expect(source).toContain('isPlacementDragBeyondThreshold(')
+    expect(source).toContain('suppressPlacementClickRef')
+    // A press that moved suppresses the following token click once.
+    expect(source).toContain('if (suppressPlacementClickRef.current) {')
+  })
+
+  it('never creates more than one placement per double-click', () => {
+    // Same-tick duplicates collapse inside the functional updater.
+    expect(source).toContain('createPlacementIfFree(prev,')
+    // Human double-click drift is suppressed by a time+pixel-distance guard.
+    expect(source).toContain('isRapidPlacementRepeat(lastPlacementCreateRef.current, point, Date.now())')
+  })
+
+  it('restyles picker rows with dark field labels above the controls', () => {
+    expect(source).toContain('battle-map-editor__field')
+    expect(source).toContain('battle-map-editor__monster-picker')
+    const css = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(css).toContain('.battle-map-editor__field input[')
+    expect(css).toContain('background: #0d1118')
   })
 })

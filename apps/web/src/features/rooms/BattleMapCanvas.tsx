@@ -51,10 +51,18 @@ type BattleMapCanvasProps = {
   cellSize?: number
   walls: CanvasWall[]
   doors: CanvasDoor[]
+  /** Localized label for a door state shown on the map. */
+  doorStateLabel: (state: string) => string
   terrain: CanvasTerrain[]
   drawings?: CanvasDrawing[]
   tokens: CanvasToken[]
   imageUrl?: string | null
+  /**
+   * M07-D F13: aligned background-image rectangle in map pixels. When absent
+   * the image keeps the legacy stretch-to-grid rendering (maps without saved
+   * grid values).
+   */
+  imageRect?: { x: number; y: number; width: number; height: number } | null
   camera: TacticalCamera
   isDm: boolean
   selectedEntryId?: string | null
@@ -66,12 +74,19 @@ type BattleMapCanvasProps = {
   previewDrawingPoints?: Array<[number, number]> | null
   /** Pen colour and width of the stroke being drawn. */
   previewDrawingStroke?: { color: string; width: number }
-  onCellClick?: (x: number, y: number) => void
+  onCellClick?: (x: number, y: number, point?: { clientX: number; clientY: number }) => void
   onTokenClick?: (entryId: string) => void
-  /** Pointer pressed on a token: start a drag (e.g. movement plan). */
-  onTokenPointerDown?: (entryId: string) => void
-  /** Pointer entered a cell while dragging (accumulates drag anchors). */
-  onCellPointerEnter?: (x: number, y: number) => void
+  /**
+   * Pointer pressed on a token: start a drag (e.g. movement plan).
+   * The press point is included so callers can tell a click (deselect)
+   * apart from a real drag (M07-D D6d placement threshold).
+   */
+  onTokenPointerDown?: (entryId: string, point?: { clientX: number; clientY: number }) => void
+  /**
+   * Pointer entered a cell while dragging (accumulates drag anchors).
+   * The pointer point is included for the same click-vs-drag threshold.
+   */
+  onCellPointerEnter?: (x: number, y: number, point?: { clientX: number; clientY: number }) => void
   onPointerUp?: () => void
   onDoorClick?: (doorId: string | null) => void
   onEmptyMouseDown?: (clientX: number, clientY: number, button: number) => void
@@ -83,6 +98,12 @@ type BattleMapCanvasProps = {
   aoeOrigin?: { x: number; y: number } | null
   /** Whether tokens intercept pointer events (false during AoE targeting). */
   tokensInteractive?: boolean
+  /**
+   * M07-D D6f: dim placement tokens outside monster mode (map editor shows
+   * placements in every tool mode). Opacity only; the token data and the
+   * DM hidden marker styling are unchanged.
+   */
+  tokensDimmed?: boolean
 }
 
 const TERRAIN_COLORS: Record<string, string> = {
@@ -95,16 +116,51 @@ function terrainColor(kind: string): string {
   return TERRAIN_COLORS[kind] ?? '#b8b8b8'
 }
 
+/**
+ * M07-D D6d: readable door-state label position in map pixels. The label
+ * sits half a cell away from the door's midpoint, perpendicular to the
+ * door direction (preferring above the door, else to its right), so the
+ * text never sits on top of the thick door line. A zero-length door
+ * falls back to directly above its point.
+ */
+export function doorLabelPosition(
+  door: { x1: number; y1: number; x2: number; y2: number },
+  cellSize: number,
+): { x: number; y: number } {
+  const dx = door.x2 - door.x1
+  const dy = door.y2 - door.y1
+  const length = Math.hypot(dx, dy)
+  const midX = (door.x1 + door.x2) / 2
+  const midY = (door.y1 + door.y2) / 2
+  let normalX = 0
+  let normalY = -1
+  if (length > 0) {
+    normalX = -dy / length
+    normalY = dx / length
+    // Prefer the upper side; for vertical doors prefer the right side.
+    if (normalY > 0 || (normalY === 0 && normalX < 0)) {
+      normalX = -normalX
+      normalY = -normalY
+    }
+  }
+  return {
+    x: (midX + normalX * 0.5) * cellSize,
+    y: (midY + normalY * 0.5) * cellSize,
+  }
+}
+
 export function BattleMapCanvas({
   widthCells,
   heightCells,
   cellSize = BATTLE_MAP_CELL_SIZE,
   walls,
   doors,
+  doorStateLabel,
   terrain,
   drawings = [],
   tokens,
   imageUrl,
+  imageRect,
   camera,
   isDm,
   selectedEntryId,
@@ -128,6 +184,7 @@ export function BattleMapCanvas({
   aoeCells,
   aoeOrigin,
   tokensInteractive = true,
+  tokensDimmed = false,
 }: BattleMapCanvasProps) {
   const mapWidth = widthCells * cellSize
   const mapHeight = heightCells * cellSize
@@ -140,7 +197,7 @@ export function BattleMapCanvas({
   useEffect(() => {
     // React registers wheel listeners as passive, so preventDefault there cannot stop the page
     // from scrolling. Listen natively on the map's wrapper (the whole map area, including the
-    // margin around a centred map) so the wheel only zooms the map.
+    // empty area around the map) so the wheel only zooms the map.
     const area = svgRef.current?.parentElement
     if (!area) return
     const handleWheel = (event: WheelEvent) => {
@@ -181,7 +238,7 @@ export function BattleMapCanvas({
 
   const handleCellClick = (event: React.MouseEvent<SVGRectElement>, x: number, y: number) => {
     event.stopPropagation()
-    onCellClick?.(x, y)
+    onCellClick?.(x, y, { clientX: event.clientX, clientY: event.clientY })
   }
 
   return (
@@ -193,6 +250,15 @@ export function BattleMapCanvas({
       data-map-height={heightCells}
       viewBox={`0 0 ${mapWidth} ${mapHeight}`}
       style={{
+        // The SVG sits at the wrap's top-left at its natural map pixel size.
+        // The wraps are position:relative + overflow:hidden, so translate(x, y)
+        // scale(zoom) with origin 0 0 is exactly what computeFitMap and
+        // computeCenterOn assume (no flex centring or stretch in between).
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: mapWidth,
+        height: mapHeight,
         transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`,
         transformOrigin: '0 0',
       }}
@@ -210,10 +276,10 @@ export function BattleMapCanvas({
       {imageUrl ? (
         <image
           href={imageUrl}
-          x={0}
-          y={0}
-          width={mapWidth}
-          height={mapHeight}
+          x={imageRect?.x ?? 0}
+          y={imageRect?.y ?? 0}
+          width={imageRect?.width ?? mapWidth}
+          height={imageRect?.height ?? mapHeight}
           data-testid="battle-map-image"
           preserveAspectRatio="none"
         />
@@ -327,15 +393,23 @@ export function BattleMapCanvas({
                 y2={door.y2 * cellSize}
                 strokeWidth={isSelected ? 8 : 6}
               />
-              <text
-                x={((door.x1 + door.x2) / 2) * cellSize}
-                y={((door.y1 + door.y2) / 2) * cellSize}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={10}
-              >
-                {door.state}
-              </text>
+              {(() => {
+                // Offset beside the door line (never on top of it) with a
+                // dark halo so zh-TW/en labels stay legible at normal zoom.
+                const label = doorLabelPosition(door, cellSize)
+                return (
+                  <text
+                    x={label.x}
+                    y={label.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={13}
+                    className="battle-map__door-label"
+                  >
+                    {doorStateLabel(door.state)}
+                  </text>
+                )
+              })()}
             </g>
           )
         })}
@@ -356,7 +430,9 @@ export function BattleMapCanvas({
               height={cellSize}
               fill="transparent"
               onClick={(e) => handleCellClick(e, x, y)}
-              onPointerEnter={() => onCellPointerEnter?.(x, y)}
+              onPointerEnter={(e) =>
+                onCellPointerEnter?.(x, y, { clientX: e.clientX, clientY: e.clientY })
+              }
               style={{ cursor: onCellClick ? 'pointer' : 'default' }}
             />
           )
@@ -376,7 +452,7 @@ export function BattleMapCanvas({
               data-entry-id={token.entry_id}
               data-selected={isSelected ? 'true' : undefined}
               data-hidden={token.isHidden ? 'true' : undefined}
-              className={`battle-map__token${isSelected ? ' battle-map__token--selected' : ''}${token.isHidden ? ' battle-map__token--hidden' : ''}`}
+              className={`battle-map__token${isSelected ? ' battle-map__token--selected' : ''}${token.isHidden ? ' battle-map__token--hidden' : ''}${tokensDimmed ? ' battle-map__token--dimmed' : ''}`}
               onClick={(e) => {
                 e.stopPropagation()
                 onTokenClick?.(token.entry_id)
@@ -385,7 +461,7 @@ export function BattleMapCanvas({
                 // Left button only; a drag plans movement, it never confirms.
                 if (e.button !== 0 || !onTokenPointerDown) return
                 e.stopPropagation()
-                onTokenPointerDown(token.entry_id)
+                onTokenPointerDown(token.entry_id, { clientX: e.clientX, clientY: e.clientY })
               }}
               style={{ cursor: onTokenClick ? 'pointer' : 'default', touchAction: 'none' }}
             >

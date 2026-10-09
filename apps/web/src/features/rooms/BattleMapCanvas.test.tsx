@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { BattleMapCanvas } from './BattleMapCanvas'
+import { BattleMapCanvas, doorLabelPosition } from './BattleMapCanvas'
+import { doorStateLabel, sessionCopy } from './sessionCopy'
 
 const camera = { x: 0, y: 0, zoom: 1 }
 
@@ -10,6 +11,7 @@ describe('BattleMapCanvas hidden rendering', () => {
     // Player projection: walls without visibility field (server omits it).
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[{ x1: 1, y1: 1, x2: 5, y2: 1 }]}
@@ -28,6 +30,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('marks hidden walls for DM when visibility is hidden', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[
@@ -49,6 +52,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('does not mark public walls as hidden for DM', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[{ x1: 1, y1: 1, x2: 5, y2: 1, visibility: 'public' }]}
@@ -65,6 +69,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('marks hidden doors for DM via isHidden flag', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -94,6 +99,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('does not leak hidden door markers to Player view', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -122,6 +128,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('renders tokens with data-entry-id for selection', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -150,6 +157,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('sets pointer-events: none on battle-map-tokens when tokensInteractive is false', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -177,6 +185,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('keeps pointer-events enabled on battle-map-tokens by default', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -200,9 +209,65 @@ describe('BattleMapCanvas hidden rendering', () => {
     expect(html).not.toContain('pointer-events:none')
   })
 
+  it('dims tokens with battle-map__token--dimmed when tokensDimmed is true', () => {
+    const dimmed = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => state}
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[
+          {
+            entry_id: 'entry-1',
+            name: 'Goblin',
+            anchor_x: 2,
+            anchor_y: 3,
+            footprint_width: 1,
+            footprint_height: 1,
+            isHidden: true,
+          },
+        ]}
+        camera={camera}
+        isDm={false}
+        tokensInteractive={false}
+        tokensDimmed
+      />,
+    )
+    expect(dimmed).toContain('battle-map__token--dimmed')
+    // The DM hidden marker survives dimming.
+    expect(dimmed).toContain('battle-map__token--hidden')
+
+    const normal = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => state}
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[
+          {
+            entry_id: 'entry-1',
+            name: 'Goblin',
+            anchor_x: 2,
+            anchor_y: 3,
+            footprint_width: 1,
+            footprint_height: 1,
+          },
+        ]}
+        camera={camera}
+        isDm={false}
+      />,
+    )
+    expect(normal).not.toContain('battle-map__token--dimmed')
+  })
+
   it('renders selected wall with battle-map__wall--selected class and data-selected attribute', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[{ id: 'w1', x1: 0, y1: 0, x2: 2, y2: 0, visibility: 'public' }]}
@@ -221,6 +286,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('renders selected door with battle-map__door--selected class and data-selected attribute', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -249,6 +315,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('renders freehand drawings as SVG polylines with cell-scaled coordinates', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -280,6 +347,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('renders selected drawing with battle-map__drawing--selected class', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -310,6 +378,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('draws each freehand stroke in its own colour and width; older drawings get the defaults', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -333,6 +402,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('selecting a drawing adds a gold halo without changing its colour or width', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -354,6 +424,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('previews the stroke being drawn in the current pen colour and width', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -372,6 +443,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('skips drawings with unknown payload kind without error', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={10}
         heightCells={10}
         walls={[]}
@@ -399,6 +471,7 @@ describe('BattleMapCanvas hidden rendering', () => {
   it('paints Normal terrain green and draws the grid above terrain fills', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas
+        doorStateLabel={(state) => state}
         widthCells={4}
         heightCells={4}
         walls={[]}
@@ -413,5 +486,103 @@ describe('BattleMapCanvas hidden rendering', () => {
     expect(html.indexOf('data-testid="battle-map-grid"')).toBeGreaterThan(
       html.indexOf('data-testid="battle-map-terrain"'),
     )
+  })
+})
+
+describe('BattleMapCanvas camera geometry', () => {
+  it('sits at the wrap top-left at its natural map size so camera math holds', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => state}
+        widthCells={10}
+        heightCells={8}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm={true}
+      />,
+    )
+    // 10x40=400 by 8x40=320: the camera translate/scale with origin 0 0
+    // assumes exactly this box at the wrap's top-left (no flex centring).
+    expect(html).toMatch(
+      /<svg[^>]*style="[^"]*position:absolute[^"]*left:0[^"]*top:0[^"]*width:400px[^"]*height:320px[^"]*"/,
+    )
+  })
+})
+
+describe('BattleMapCanvas door labels', () => {
+  const door = { door_id: 'd1', x1: 1, y1: 1, x2: 2, y2: 1, state: 'closed', revealed: true }
+
+  it.each([
+    ['zh-TW', '關閉'],
+    ['en', 'Closed'],
+  ] as const)('shows the %s door state label instead of the raw state', (locale, label) => {
+    const copy = sessionCopy(locale)
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => doorStateLabel(copy, state)}
+        widthCells={4}
+        heightCells={4}
+        walls={[]}
+        doors={[door]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm
+      />,
+    )
+    expect(html).toContain(`>${label}</text>`)
+    expect(html).not.toContain('>closed</text>')
+  })
+
+  it('maps every door state to both locales', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const copy = sessionCopy(locale)
+      for (const state of ['open', 'closed', 'locked', 'broken']) {
+        expect(doorStateLabel(copy, state)).not.toBe(state)
+      }
+    }
+  })
+
+  it('offsets the label half a cell perpendicular to the door, never on the line', () => {
+    // Horizontal door from (1, 1) to (3, 1): midpoint (2, 1), label above.
+    expect(doorLabelPosition({ x1: 1, y1: 1, x2: 3, y2: 1 }, 40)).toEqual({
+      x: 80,
+      y: 20,
+    })
+    // Vertical door from (2, 1) to (2, 4): midpoint (2, 2.5), label right.
+    expect(doorLabelPosition({ x1: 2, y1: 1, x2: 2, y2: 4 }, 40)).toEqual({
+      x: 100,
+      y: 100,
+    })
+    // Zero-length door falls back to above its point.
+    expect(doorLabelPosition({ x1: 2, y1: 2, x2: 2, y2: 2 }, 40)).toEqual({
+      x: 80,
+      y: 60,
+    })
+  })
+
+  it('renders the label larger with a dark halo class beside the door line', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => doorStateLabel(sessionCopy('zh-TW'), state)}
+        widthCells={6}
+        heightCells={6}
+        walls={[]}
+        doors={[{ ...door, x1: 1, y1: 1, x2: 3, y2: 1 }]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm
+      />,
+    )
+    // Midpoint x=80 on the line; the label is offset half a cell above it.
+    expect(html).toContain('class="battle-map__door-label"')
+    expect(html).toContain('font-size="13"')
+    expect(html).toContain('x="80"')
+    expect(html).toContain('y="20"')
+    expect(html).toContain('>關閉</text>')
   })
 })

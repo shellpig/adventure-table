@@ -274,6 +274,8 @@ const copy = {
     tacticalMapListEmpty: '尚無已存地圖',
     tacticalStartBlank: '空白地圖',
     tacticalToolMonster: '怪物',
+    tacticalMonsterPlacementCopy: '複製',
+    tacticalMonsterPlacementCopyNoSpace: '地圖已滿，沒有可放置複製品的空格。',
     tacticalLoadMonstersHeading: '地圖怪物',
     tacticalLoadMapOnly: '只載入地圖',
     tacticalLoadMapWithMonsters: '連同怪物載入',
@@ -728,6 +730,8 @@ const copy = {
     tacticalMapListEmpty: 'No saved maps yet',
     tacticalStartBlank: 'Blank Map',
     tacticalToolMonster: 'Monsters',
+    tacticalMonsterPlacementCopy: 'Copy',
+    tacticalMonsterPlacementCopyNoSpace: 'Map is full; no free cell left for the copy.',
     tacticalLoadMonstersHeading: 'Map monsters',
     tacticalLoadMapOnly: 'Load map only',
     tacticalLoadMapWithMonsters: 'Load with monsters',
@@ -917,6 +921,18 @@ export type SessionCopy = (typeof copy)[Locale]
 
 export function sessionCopy(locale: Locale): SessionCopy {
   return copy[locale]
+}
+
+const DOOR_STATE_KEYS = {
+  open: 'tacticalDoorState_open',
+  closed: 'tacticalDoorState_closed',
+  locked: 'tacticalDoorState_locked',
+  broken: 'tacticalDoorState_broken',
+} as const
+
+export function doorStateLabel(presentation: SessionCopy, state: string): string {
+  const key = DOOR_STATE_KEYS[state as keyof typeof DOOR_STATE_KEYS]
+  return key ? presentation[key] : state
 }
 
 export function sessionErrorMessage(error: unknown, presentation: SessionCopy): string {

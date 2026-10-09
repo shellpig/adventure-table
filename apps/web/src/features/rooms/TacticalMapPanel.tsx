@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
-import { getBattleMap, type BattleMap } from '../../api/battleMaps'
+import { getSessionBattleMap, type BattleMap } from '../../api/battleMaps'
 import { proposeAoeSpell } from '../../api/combat'
 import type { CombatDetailView } from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
@@ -23,9 +23,14 @@ import {
 } from '../../api/tacticalCombat'
 import { BattleMapCanvas } from './BattleMapCanvas'
 import type { CanvasDoor, CanvasToken, CanvasWall } from './BattleMapCanvas'
+import {
+  battleMapImageRect,
+  imageGridFromValues,
+  useImageNaturalSize,
+} from './battleMapImageGrid'
 import { requestId } from './requestId'
-import type { SessionCopy } from './sessionCopy'
-import { combatantFor } from './sessionCombat'
+import { doorStateLabel, type SessionCopy } from './sessionCopy'
+import { combatantFor, combatEntryDisplayName } from './sessionCombat'
 import {
   appendAnchor,
   aoeShapeNeedsAim,
@@ -37,7 +42,7 @@ import {
   type AoeShapeKind,
   type MapMode,
 } from './tacticalLogic'
-import { useTacticalCamera } from './useTacticalCamera'
+import { BATTLE_MAP_CELL_SIZE, resolveViewportSize, useTacticalCamera } from './useTacticalCamera'
 
 export type AoePlacementRequest = {
   spell_ref: string
@@ -249,9 +254,16 @@ export function TacticalMapPanel({
       setBoard(view)
       setBoardError(false)
       // DM loads the source battle map definition for hidden door correlation.
+      // M07-D F14: Session-scoped read so a non-Owner current DM is allowed.
       if (isCurrentDm && view.source_battle_map_id) {
         try {
-          const map = await getBattleMap(roomId, view.source_battle_map_id, token)
+          const map = await getSessionBattleMap(
+            roomId,
+            campaignId,
+            sessionId,
+            view.source_battle_map_id,
+            token,
+          )
           setBattleMap(map)
         } catch {
           setBattleMap(null)
@@ -355,12 +367,27 @@ export function TacticalMapPanel({
     [board, battleMap, isCurrentDm],
   )
 
+  // M07-D F13: align the board background image to the saved grid values;
+  // boards without saved values keep the legacy stretch rendering.
+  const boardImageNaturalSize = useImageNaturalSize(imageObjectUrl)
+  const boardImageGrid = board
+    ? imageGridFromValues(board.grid_pixel_size, board.grid_offset_x, board.grid_offset_y)
+    : null
+  const boardImageRect =
+    boardImageGrid && boardImageNaturalSize
+      ? battleMapImageRect(boardImageGrid, boardImageNaturalSize, BATTLE_MAP_CELL_SIZE)
+      : null
+
   const canvasTokens: CanvasToken[] = useMemo(
     () =>
       (board?.positions ?? []).map((p) => {
         const entry = combat.entries.find((e) => e.id === p.entry_id)
+        // M07-D F18: same name rule as Stage/ActionBar; a DM rename flips
+        // name_is_custom (D1 F15) so the new name shows here too.
         const combatant = combatantFor(combat, p.entry_id)
-        const name = combatant?.projection.name || entry?.display_name || ''
+        const name = entry
+          ? combatEntryDisplayName(combat, entry, copy.locale)
+          : combatant?.projection.name || ''
         return {
           entry_id: p.entry_id,
           name,
@@ -370,19 +397,28 @@ export function TacticalMapPanel({
           footprint_height: p.footprint_height,
         }
       }),
-    [board, combat],
+    [board, combat, copy.locale],
   )
 
-  const getViewportSize = useCallback((): { width: number; height: number } => {
-    const el = boardWrapRef.current
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      if (rect.width > 0 && rect.height > 0) {
-        return { width: rect.width, height: rect.height }
-      }
-    }
-    return { width: 800, height: 600 }
-  }, [])
+  const getViewportSize = useCallback((): { width: number; height: number } => (
+    resolveViewportSize(boardWrapRef.current)
+  ), [])
+
+  // M07-D D6c: fit once when the board first loads so DM and players see the
+  // whole map initially. Later board updates (polls, moves, doors) must not
+  // move the camera; the Fit button refits on demand.
+  const boardInitialFitDoneRef = useRef(false)
+  useLayoutEffect(() => {
+    if (!board || boardInitialFitDoneRef.current) return
+    boardInitialFitDoneRef.current = true
+    const { width, height } = getViewportSize()
+    fitMap(
+      board.width_cells * BATTLE_MAP_CELL_SIZE,
+      board.height_cells * BATTLE_MAP_CELL_SIZE,
+      width,
+      height,
+    )
+  }, [board, fitMap, getViewportSize])
 
   const handleFitMap = useCallback(() => {
     if (!board) return
@@ -931,6 +967,7 @@ export function TacticalMapPanel({
             heightCells={board.height_cells}
             walls={canvasWalls}
             doors={canvasDoors}
+            doorStateLabel={(state) => doorStateLabel(copy, state)}
             terrain={board.terrain.map((t) => ({
               x: t.x,
               y: t.y,
@@ -939,6 +976,7 @@ export function TacticalMapPanel({
             drawings={board.drawings}
             tokens={canvasTokens}
             imageUrl={imageObjectUrl}
+            imageRect={boardImageRect}
             camera={camera}
             isDm={isCurrentDm}
             selectedEntryId={selectedEntryId}

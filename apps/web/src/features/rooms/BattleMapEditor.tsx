@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type {
   BattleMap,
@@ -6,7 +6,12 @@ import type {
   BattleMapTerrainKind,
   MonsterPlacementProblem,
 } from '../../api/battleMaps'
-import { replaceBattleMapObjects, replaceMonsterPlacements } from '../../api/battleMaps'
+import {
+  patchBattleMap,
+  replaceBattleMapObjects,
+  replaceMonsterPlacements,
+  type BattleMapPatchInput,
+} from '../../api/battleMaps'
 import type { MonsterLibrarySummaryView } from '../../api/monsterLibrary'
 import { getMonsterLibraryEntry, listMonsterLibrary } from '../../api/monsterLibrary'
 import { SessionApiError } from '../../api/sessions'
@@ -15,19 +20,41 @@ import type { Locale } from '../../i18n/locale'
 import { BattleMapCanvas } from './BattleMapCanvas'
 import type { CanvasDoor, CanvasTerrain, CanvasToken, CanvasWall } from './BattleMapCanvas'
 import {
+  battleMapImageRect,
+  imageGridFromValues,
+  isValidGridOffsetInput,
+  isValidGridPixelSizeInput,
+  parseGridOffsetInput,
+  parseGridPixelSizeInput,
+  useImageNaturalSize,
+} from './battleMapImageGrid'
+import {
   availableMonsterTemplates,
   buildMonsterPlacementsBody,
+  createPlacementIfFree,
   extractPlacementProblems,
+  findNearestFreePlacementAnchor,
   footprintForSizeName,
+  isRapidPlacementRepeat,
   monsterPlacementsFromMap,
   monsterSummaryFromDetail,
   moveMonsterPlacement,
   newPlacementClientId,
+  popPlacementHistory,
+  pushPlacementHistory,
   removeMonsterPlacement,
   resolvePlacementTemplate,
+  sameMonsterPlacements,
   toggleMonsterPlacementVisibility,
+  type PlacementCreateStamp,
   type WorkingMonsterPlacement,
 } from './mapMonsterPlacements'
+import {
+  isPlacementDragBeyondThreshold,
+  placementPopoverPosition,
+  placementTokenScreenRect,
+  PLACEMENT_POPOVER_SIZE,
+} from './monsterPlacementPopover'
 import {
   battleMapLibraryCopy,
   monsterPlacementProblemMessage,
@@ -43,6 +70,7 @@ import {
   DRAWING_WIDTH_MIN,
   type DrawingColorKey,
   EDITOR_CANVAS_HEIGHT_DEFAULT,
+  viewportFillCanvasHeight,
   deleteById,
   eraseAt,
   findAt,
@@ -61,8 +89,8 @@ import {
   snapToVertex,
   type CellPoint,
 } from './mapEditorState'
-import type { SessionCopy } from './sessionCopy'
-import { BATTLE_MAP_CELL_SIZE, useTacticalCamera } from './useTacticalCamera'
+import { doorStateLabel, type SessionCopy } from './sessionCopy'
+import { BATTLE_MAP_CELL_SIZE, resolveViewportSize, useTacticalCamera } from './useTacticalCamera'
 
 export type EditorTool =
   | 'select'
@@ -82,6 +110,8 @@ type BattleMapEditorProps = {
   onSaved: (map: BattleMap) => void
   onError: (cause: unknown) => void
   onClose: () => void
+  /** Map Library: open with the canvas stretched to the bottom of the screen. */
+  fillViewportHeight?: boolean
 }
 
 let localIdCounter = 0
@@ -120,6 +150,7 @@ export function BattleMapEditor({
   onSaved,
   onError,
   onClose,
+  fillViewportHeight = false,
 }: BattleMapEditorProps) {
   const [working, setWorking] = useState<WorkingState>(() => toWorkingState(map))
   const [history, setHistory] = useState<WorkingState[]>([])
@@ -158,6 +189,17 @@ export function BattleMapEditor({
   const [placementProblems, setPlacementProblems] = useState<MonsterPlacementProblem[]>([])
   const [placementsSaving, setPlacementsSaving] = useState(false)
   const [placementsMessage, setPlacementsMessage] = useState<string | null>(null)
+  // M07-D D6e: placement undo stack. Each entry is the placements array as it
+  // was before one edit step (place, move, visibility toggle, remove); a
+  // token drag records its pre-drag snapshot once, so it undoes as one step.
+  const [placementHistory, setPlacementHistory] = useState<WorkingMonsterPlacement[][]>([])
+  // M07-D F17 (option b): synchronous mirror of the working placements. The
+  // save response only overwrites them when nothing changed mid-flight; a
+  // newer edit is kept and flagged unsaved instead of being clobbered.
+  const placementsRef = useRef(placements)
+  useEffect(() => {
+    placementsRef.current = placements
+  }, [placements])
 
   // Editor previews and highlights
   const [highlightSegment, setHighlightSegment] = useState<GridSegment | null>(null)
@@ -174,6 +216,36 @@ export function BattleMapEditor({
   )
 
   const containerRef = useRef<HTMLDivElement | null>(null)
+  // Height the fill-viewport effect below produced (null when it does not
+  // apply). The open-fitted effect waits until canvasHeight matches it.
+  const filledCanvasHeightRef = useRef<number | null>(null)
+
+  // M07-D D6d: measured canvas-wrap size for the placement popover clamp.
+  // Re-measures on resize; popover position itself derives from the camera
+  // during render, so it follows pan/zoom and token moves automatically.
+  const [canvasWrapSize, setCanvasWrapSize] = useState({ width: 0, height: 0 })
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const measure = () => {
+      setCanvasWrapSize({ width: el.clientWidth, height: el.clientHeight })
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // Map Library: open with the canvas reaching the viewport bottom. Picker
+  // rows that appear later push it down; the handle still resizes it.
+  useLayoutEffect(() => {
+    if (!fillViewportHeight || !containerRef.current) return
+    const top = containerRef.current.getBoundingClientRect().top + window.scrollY
+    const filled = viewportFillCanvasHeight(top, window.innerHeight)
+    filledCanvasHeightRef.current = filled
+    setCanvasHeight(filled)
+  }, [fillViewportHeight])
   const dragStartVertexRef = useRef<{ x: number; y: number } | null>(null)
   const lastSnappedVertexRef = useRef<{ x: number; y: number } | null>(null)
   const clickSegmentRef = useRef<GridSegment | null>(null)
@@ -184,6 +256,35 @@ export function BattleMapEditor({
 
   const { camera, zoomIn, zoomOut, handleWheel, startPan, panBy, endPan, fitMap } =
     useTacticalCamera()
+
+  // M07-D D6c: open with the whole map fitted into the real canvas size.
+  // With fillViewportHeight the first commit still carries the default height,
+  // so the fit waits until the fill effect above has landed (its produced
+  // height equals canvasHeight). It runs exactly once: user pan/zoom and the
+  // resize handle are never overridden afterwards; the Fit button refits.
+  const editorInitialFitDoneRef = useRef(false)
+  useLayoutEffect(() => {
+    if (editorInitialFitDoneRef.current) return
+    if (fillViewportHeight && filledCanvasHeightRef.current !== canvasHeight) return
+    editorInitialFitDoneRef.current = true
+    const { width, height } = resolveViewportSize(containerRef.current)
+    fitMap(
+      map.width_cells * BATTLE_MAP_CELL_SIZE,
+      map.height_cells * BATTLE_MAP_CELL_SIZE,
+      width,
+      height,
+    )
+  }, [canvasHeight, fillViewportHeight, fitMap, map.height_cells, map.width_cells])
+
+  const handleEditorFitMap = useCallback(() => {
+    const { width, height } = resolveViewportSize(containerRef.current)
+    fitMap(
+      map.width_cells * BATTLE_MAP_CELL_SIZE,
+      map.height_cells * BATTLE_MAP_CELL_SIZE,
+      width,
+      height,
+    )
+  }, [fitMap, map.height_cells, map.width_cells])
 
   const pushHistory = useCallback((prev: WorkingState) => {
     setHistory((h) => [...h.slice(-49), prev])
@@ -202,6 +303,25 @@ export function BattleMapEditor({
   )
 
   const handleUndo = useCallback(() => {
+    // M07-D D6e: undo follows the active mode. Monster mode rewinds placement
+    // edits; geometry modes rewind geometry exactly as before.
+    if (monsterMode) {
+      setPlacementHistory((h) => {
+        const popped = popPlacementHistory(h)
+        if (!popped) return h
+        setPlacements(popped.placements)
+        // A rewound place/remove can orphan the selection; drop it only then
+        // so move-undos keep the popover open on the restored token.
+        if (
+          selectedPlacementId &&
+          !popped.placements.some((p) => p.clientId === selectedPlacementId)
+        ) {
+          setSelectedPlacementId(null)
+        }
+        return popped.history
+      })
+      return
+    }
     setHistory((h) => {
       if (h.length === 0) return h
       const prev = h[h.length - 1]
@@ -209,7 +329,27 @@ export function BattleMapEditor({
       setSelectedId(null)
       return h.slice(0, -1)
     })
+  }, [monsterMode, selectedPlacementId])
+
+  const pushPlacementHistoryEntry = useCallback((prev: WorkingMonsterPlacement[]) => {
+    setPlacementHistory((h) => pushPlacementHistory(h, prev))
   }, [])
+
+  // M07-D D6e: every placement mutation goes through here so Ctrl/Cmd+Z and
+  // the Undo button can rewind it in monster mode. No-op updaters (same cell,
+  // unknown id) push nothing and skip the re-render.
+  const updatePlacements = useCallback(
+    (updater: (prev: WorkingMonsterPlacement[]) => WorkingMonsterPlacement[]) => {
+      setPlacements((prev) => {
+        const next = updater(prev)
+        if (next === prev || sameMonsterPlacements(prev, next)) return prev
+        pushPlacementHistoryEntry(prev)
+        return next
+      })
+      setPlacementsMessage(null)
+    },
+    [pushPlacementHistoryEntry],
+  )
 
   const selectTool = useCallback((nextTool: EditorTool) => {
     setTool(nextTool)
@@ -225,8 +365,9 @@ export function BattleMapEditor({
   }, [])
 
   const getMapCell = useCallback((clientX: number, clientY: number): CellPoint | null => {
-    // The SVG's screen CTM already includes the wrapper centring, the camera CSS transform and
-    // the SVG's rendered size, so it maps the pointer straight into viewBox pixels.
+    // The SVG sits at the wrap's top-left at its natural map size, so its
+    // screen CTM already includes the camera CSS transform and zoom and maps
+    // the pointer straight into viewBox pixels.
     const svg = containerRef.current?.querySelector<SVGSVGElement>('svg[data-testid="battle-map"]')
     const ctm = svg?.getScreenCTM()
     if (!ctm) return null
@@ -246,6 +387,11 @@ export function BattleMapEditor({
 
       const cell = getMapCell(e.clientX, e.clientY)
       if (!cell) return
+
+      // M07-D F16: monster mode owns the canvas; geometry tools (wall /
+      // door / terrain / drawing) must not paint while placing monsters.
+      // Middle-button pan above still works.
+      if (monsterMode) return
 
       if (tool === 'terrain') {
         const x = Math.floor(cell.cellX)
@@ -273,12 +419,15 @@ export function BattleMapEditor({
         setPreviewDrawingPoints([[rx, ry]])
       }
     },
-    [getMapCell, map.height_cells, map.width_cells, startPan, terrainKind, tool, updateWorking],
+    [getMapCell, map.height_cells, map.width_cells, monsterMode, startPan, terrainKind, tool, updateWorking],
   )
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       panBy(e.clientX, e.clientY)
+
+      // M07-D F16: no geometry hover/drag state while placing monsters.
+      if (monsterMode) return
 
       const cell = getMapCell(e.clientX, e.clientY)
       if (!cell) return
@@ -357,13 +506,25 @@ export function BattleMapEditor({
         setHighlightObjectId(null)
       }
     },
-    [getMapCell, map.height_cells, map.width_cells, panBy, terrainKind, tool, working],
+    [getMapCell, map.height_cells, map.width_cells, monsterMode, panBy, terrainKind, tool, working],
   )
 
   const handleMouseUp = useCallback(() => {
     endPan()
     paintingCellRef.current = null
 
+    // M07-D F16: a drag started before entering monster mode must not land
+    // a wall/door/drawing afterwards.
+    if (monsterMode) {
+      dragStartVertexRef.current = null
+      lastSnappedVertexRef.current = null
+      clickSegmentRef.current = null
+      setPreviewLine(null)
+      isDrawingRef.current = false
+      drawingPointsRef.current = []
+      setPreviewDrawingPoints(null)
+      return
+    }
     if (dragStartVertexRef.current && (tool === 'wall' || tool === 'door')) {
       const start = dragStartVertexRef.current
       const end = lastSnappedVertexRef.current ?? start
@@ -442,6 +603,11 @@ export function BattleMapEditor({
           drawingPointsRef.current = []
           setPreviewDrawingPoints(null)
         }
+        // M07-D D6d: Escape also drops the monster placement selection.
+        if (monsterMode) {
+          dragPlacementRef.current = null
+          setSelectedPlacementId(null)
+        }
         return
       }
 
@@ -457,7 +623,7 @@ export function BattleMapEditor({
       window.removeEventListener('mouseup', handleGlobalMouseUp)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [handleMouseUp, handleUndo])
+  }, [handleMouseUp, handleUndo, monsterMode])
 
   const startResize = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -534,11 +700,13 @@ export function BattleMapEditor({
   // Resolve saved placements whose template is not on the current menu page.
   // Each missing ref is fetched once via the detail endpoint (archived custom
   // templates included); refs the server rejects are remembered so a reopen
-  // with a deleted template does not refetch in a loop.
+  // with a deleted template does not refetch in a loop. Placements render in
+  // every mode, so this also runs before the menu list is ever loaded; only
+  // in monster mode does it wait for that list to avoid duplicate fetches.
   useEffect(() => {
-    if (!monsterMode || templates === null) return
+    if (monsterMode && templates === null) return
     const known = new Set([
-      ...templates.map((t) => t.ref),
+      ...(templates ?? []).map((t) => t.ref),
       ...Object.keys(resolvedTemplates),
     ])
     const missing = Array.from(new Set(placements.map((p) => p.templateRef))).filter(
@@ -603,67 +771,267 @@ export function BattleMapEditor({
   )
 
   const handleMonsterCellClick = useCallback(
-    (x: number, y: number) => {
+    (x: number, y: number, point?: { clientX: number; clientY: number }) => {
       const hit = placementAt(x, y)
       if (hit) {
         setSelectedPlacementId((prev) => (prev === hit.clientId ? null : hit.clientId))
         return
       }
       if (selectedPlacementId) {
-        setPlacements((prev) => moveMonsterPlacement(prev, selectedPlacementId, x, y))
-        setPlacementsMessage(null)
+        updatePlacements((prev) => moveMonsterPlacement(prev, selectedPlacementId, x, y))
         return
       }
       if (selectedTemplateRef) {
-        setPlacements((prev) => [
-          ...prev,
-          {
-            clientId: newPlacementClientId(),
-            templateRef: selectedTemplateRef,
-            anchor_x: x,
-            anchor_y: y,
-            visibility: newPlacementVisibility,
-          },
-        ])
-        setPlacementsMessage(null)
+        // M07-D D6d: the second half of a double-click must not place a
+        // second monster. Deliberate placements are seconds apart and a
+        // full cell apart on screen.
+        if (point && isRapidPlacementRepeat(lastPlacementCreateRef.current, point, Date.now())) {
+          return
+        }
+        if (point) {
+          lastPlacementCreateRef.current = {
+            clientX: point.clientX,
+            clientY: point.clientY,
+            time: Date.now(),
+          }
+        }
+        const templateRef = selectedTemplateRef
+        const visibility = newPlacementVisibility
+        const sizeOf = (ref: string): { width: number; height: number } =>
+          footprintForSizeName(templateForPlacement(ref)?.size)
+        // createPlacementIfFree runs inside the updater against the latest
+        // array, so even two clicks processed before a re-render (both
+        // closures seeing an empty cell) still yield exactly one row.
+        updatePlacements((prev) => createPlacementIfFree(prev, {
+          templateRef,
+          anchor_x: x,
+          anchor_y: y,
+          visibility,
+        }, sizeOf).placements)
       }
     },
-    [placementAt, selectedPlacementId, selectedTemplateRef, newPlacementVisibility],
+    [placementAt, selectedPlacementId, selectedTemplateRef, newPlacementVisibility, templateForPlacement, updatePlacements],
   )
 
   const handlePlacementTokenClick = useCallback((clientId: string) => {
+    // A press that turned into a real drag must not toggle the selection
+    // when the pointer comes back down on the token.
+    if (suppressPlacementClickRef.current) {
+      suppressPlacementClickRef.current = false
+      return
+    }
     setSelectedPlacementId((prev) => (prev === clientId ? null : clientId))
+  }, [])
+
+  // M07-D F19: drag a placement token onto its destination cell. The drop
+  // writes the same working state as click-select-then-click-destination
+  // (kept as the alternative); footprint preview follows the drag through
+  // placementTokens, and out-of-bounds/overlap still surface as server-side
+  // save problems like any other move.
+  //
+  // M07-D D6d: the drag only starts past a small pointer threshold, so an
+  // ordinary click (including its sub-pixel jitter) never moves the token
+  // and the token click still toggles the selection exactly once. A press
+  // that did move suppresses the following token click.
+  const dragPlacementRef = useRef<{
+    clientId: string
+    startClientX: number
+    startClientY: number
+    // M07-D D6e: pre-drag placements snapshot. The first real cell change of
+    // the drag pushes this snapshot once, so the whole drag undoes as one step.
+    snapshot: WorkingMonsterPlacement[]
+    historyPushed: boolean
+  } | null>(null)
+  const suppressPlacementClickRef = useRef(false)
+  // Stamp of the last created placement for double-click suppression.
+  const lastPlacementCreateRef = useRef<PlacementCreateStamp | null>(null)
+
+  const handlePlacementTokenPointerDown = useCallback(
+    (clientId: string, point?: { clientX: number; clientY: number }) => {
+      // Arm the drag only; selection stays on the click path so press+release
+      // without moving still toggles the selection exactly once. The snapshot
+      // is the single undo entry if this press turns into a real drag.
+      dragPlacementRef.current = {
+        clientId,
+        startClientX: point?.clientX ?? 0,
+        startClientY: point?.clientY ?? 0,
+        snapshot: placementsRef.current,
+        historyPushed: false,
+      }
+      suppressPlacementClickRef.current = false
+    },
+    [],
+  )
+
+  const handlePlacementCellPointerEnter = useCallback(
+    (x: number, y: number, point?: { clientX: number; clientY: number }) => {
+      const dragging = dragPlacementRef.current
+      if (!dragging) return
+      if (
+        point &&
+        !isPlacementDragBeyondThreshold(
+          dragging.startClientX,
+          dragging.startClientY,
+          point.clientX,
+          point.clientY,
+        )
+      ) {
+        return
+      }
+      // One undo step per drag: push the pre-drag snapshot on the first cell
+      // that actually moves the token, never once per cell.
+      if (!dragging.historyPushed) {
+        const from = dragging.snapshot.find((p) => p.clientId === dragging.clientId)
+        if (from && (from.anchor_x !== x || from.anchor_y !== y)) {
+          dragging.historyPushed = true
+          pushPlacementHistoryEntry(dragging.snapshot)
+        }
+      }
+      setPlacements((prev) => {
+        const next = moveMonsterPlacement(prev, dragging.clientId, x, y)
+        return next === prev || sameMonsterPlacements(prev, next) ? prev : next
+      })
+      setPlacementsMessage(null)
+      suppressPlacementClickRef.current = true
+    },
+    [pushPlacementHistoryEntry],
+  )
+
+  const handlePlacementPointerUp = useCallback(() => {
+    dragPlacementRef.current = null
+  }, [])
+
+  // M07-D D2c: a drag released outside the SVG never reaches its onPointerUp,
+  // so later plain hover would keep moving the placement. Clear the armed
+  // drag on any global release; leaving Monster mode disarms it too. Window
+  // pointerup does not intercept cell hit testing (cells still use
+  // onPointerEnter/click only).
+  useEffect(() => {
+    if (!monsterMode) {
+      dragPlacementRef.current = null
+      return
+    }
+    const clearDrag = () => {
+      dragPlacementRef.current = null
+    }
+    window.addEventListener('pointerup', clearDrag)
+    window.addEventListener('pointercancel', clearDrag)
+    return () => {
+      window.removeEventListener('pointerup', clearDrag)
+      window.removeEventListener('pointercancel', clearDrag)
+    }
+  }, [monsterMode])
+
+  // M07-D D6e: single exit path for monster mode. Geometry tool buttons and
+  // the Monsters toggle share it: selection/popover cleared, any armed token
+  // drag disarmed. Placements (and their undo stack) are untouched, so
+  // unsaved edits survive a tool switch.
+  const leaveMonsterMode = useCallback(() => {
+    dragPlacementRef.current = null
+    setMonsterMode(false)
+    setSelectedPlacementId(null)
   }, [])
 
   const togglePlacementHidden = useCallback(() => {
     if (!selectedPlacementId) return
-    setPlacements((prev) => toggleMonsterPlacementVisibility(prev, selectedPlacementId))
-    setPlacementsMessage(null)
-  }, [selectedPlacementId])
+    updatePlacements((prev) => toggleMonsterPlacementVisibility(prev, selectedPlacementId))
+  }, [selectedPlacementId, updatePlacements])
 
   const removeSelectedPlacement = useCallback(() => {
     if (!selectedPlacementId) return
-    setPlacements((prev) => removeMonsterPlacement(prev, selectedPlacementId))
+    updatePlacements((prev) => removeMonsterPlacement(prev, selectedPlacementId))
     setSelectedPlacementId(null)
-    setPlacementsMessage(null)
-  }, [selectedPlacementId])
+  }, [selectedPlacementId, updatePlacements])
+
+  // M07-D D6f: Copy duplicates the selected placement (same template ref and
+  // visibility) at the nearest free anchor. The search runs against the
+  // latest array inside the updater; the client id is pre-generated so the
+  // updater stays pure under StrictMode double-invoke (one undo step, and
+  // the selected id always matches the committed row). The copy flows through
+  // updatePlacements, so one Ctrl+Z removes it like any other placement edit.
+  const copySelectedPlacement = useCallback(() => {
+    const snapshot = placementsRef.current
+    const source = snapshot.find((p) => p.clientId === selectedPlacementId)
+    if (!source) return
+    const sizeOf = (ref: string): { width: number; height: number } =>
+      footprintForSizeName(templateForPlacement(ref)?.size)
+    const footprint = sizeOf(source.templateRef)
+    const mapSize = { widthCells: map.width_cells, heightCells: map.height_cells }
+    const preview = findNearestFreePlacementAnchor(
+      snapshot,
+      { anchor_x: source.anchor_x, anchor_y: source.anchor_y },
+      footprint,
+      mapSize,
+      sizeOf,
+    )
+    if (!preview) {
+      setPlacementsMessage(copy.tacticalMonsterPlacementCopyNoSpace)
+      return
+    }
+    const copiedClientId = newPlacementClientId()
+    updatePlacements((prev) => {
+      const live = prev.find((p) => p.clientId === selectedPlacementId)
+      if (!live) return prev
+      const target = findNearestFreePlacementAnchor(
+        prev,
+        { anchor_x: live.anchor_x, anchor_y: live.anchor_y },
+        footprint,
+        mapSize,
+        sizeOf,
+      )
+      if (!target) return prev
+      return [
+        ...prev,
+        {
+          clientId: copiedClientId,
+          templateRef: live.templateRef,
+          anchor_x: target.anchor_x,
+          anchor_y: target.anchor_y,
+          visibility: live.visibility,
+        },
+      ]
+    })
+    // Select the copy so the popover follows it and the user can drag it.
+    setSelectedPlacementId(copiedClientId)
+  }, [
+    selectedPlacementId,
+    templateForPlacement,
+    map.width_cells,
+    map.height_cells,
+    copy.tacticalMonsterPlacementCopyNoSpace,
+    updatePlacements,
+  ])
 
   const handleSavePlacements = useCallback(async () => {
     if (placementsSaving) return
+    // Snapshot by reference: every placement edit builds a new array, so a
+    // changed reference at response time means a newer unsaved edit exists.
+    const inFlight = placementsRef.current
     setPlacementsSaving(true)
     setPlacementsMessage(null)
     try {
       const saved = await replaceMonsterPlacements(
         roomId,
         map.id,
-        buildMonsterPlacementsBody(map.revision, placements),
+        buildMonsterPlacementsBody(map.revision, inFlight),
         token,
       )
-      setPlacements(monsterPlacementsFromMap(saved.monster_placements ?? []))
-      setPlacementProblems([])
-      setSelectedPlacementId(null)
-      setPlacementsMessage(libraryCopy.monsterPlacementSaved)
+      // The parent still needs the bumped revision for the next save even
+      // when the working state moved on.
       onSaved(saved)
+      if (placementsRef.current !== inFlight) {
+        setPlacementsMessage(libraryCopy.monsterPlacementUnsavedChanges)
+      } else {
+        setPlacements(monsterPlacementsFromMap(saved.monster_placements ?? []))
+        setPlacementProblems([])
+        setSelectedPlacementId(null)
+        setPlacementsMessage(libraryCopy.monsterPlacementSaved)
+        // Mirror the geometry save (setHistory([]) there): the saved rows
+        // carry server-assigned ids, so pre-save undo entries would restore
+        // stale ids. Mid-flight edits above keep the stack because the working
+        // state — and its history — is still newer than the response.
+        setPlacementHistory([])
+      }
     } catch (cause) {
       if (cause instanceof SessionApiError && cause.code === 'map_monster_placement_invalid') {
         setPlacementProblems(extractPlacementProblems(cause))
@@ -686,7 +1054,6 @@ export function BattleMapEditor({
     roomId,
     map.id,
     map.revision,
-    placements,
     token,
     libraryCopy,
     locale,
@@ -722,6 +1089,95 @@ export function BattleMapEditor({
       setSaving(false)
     }
   }, [roomId, map.id, map.revision, working, token, copy, locale, onSaved, onError])
+
+  // M07-D F13: grid alignment for image maps (blank maps reject grid fields).
+  const [gridSize, setGridSize] = useState(map.grid_pixel_size?.toString() ?? '')
+  const [gridOffsetX, setGridOffsetX] = useState(map.grid_offset_x?.toString() ?? '')
+  const [gridOffsetY, setGridOffsetY] = useState(map.grid_offset_y?.toString() ?? '')
+  const [gridSaving, setGridSaving] = useState(false)
+  const [gridMessage, setGridMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    setGridSize(map.grid_pixel_size?.toString() ?? '')
+    setGridOffsetX(map.grid_offset_x?.toString() ?? '')
+    setGridOffsetY(map.grid_offset_y?.toString() ?? '')
+  }, [map.id, map.grid_pixel_size, map.grid_offset_x, map.grid_offset_y])
+
+  const gridInvalid =
+    !isValidGridPixelSizeInput(gridSize)
+    || !isValidGridOffsetInput(gridOffsetX)
+    || !isValidGridOffsetInput(gridOffsetY)
+
+  const handleSaveGrid = useCallback(async () => {
+    if (gridSaving || gridInvalid) return
+    const body: BattleMapPatchInput = { expected_revision: map.revision }
+    let changed = false
+    const size = parseGridPixelSizeInput(gridSize)
+    // The saved payload is the exact preview: a positive size renders with
+    // zero offsets when the offset inputs are blank.
+    const rawOffsetX = parseGridOffsetInput(gridOffsetX)
+    const rawOffsetY = parseGridOffsetInput(gridOffsetY)
+    const offsetX = size !== null ? (rawOffsetX ?? 0) : rawOffsetX
+    const offsetY = size !== null ? (rawOffsetY ?? 0) : rawOffsetY
+    if (size !== (map.grid_pixel_size ?? null)) {
+      body.grid_pixel_size = size
+      changed = true
+    }
+    if (offsetX !== (map.grid_offset_x ?? null)) {
+      body.grid_offset_x = offsetX
+      changed = true
+    }
+    if (offsetY !== (map.grid_offset_y ?? null)) {
+      body.grid_offset_y = offsetY
+      changed = true
+    }
+    if (!changed) {
+      setGridMessage(libraryCopy.gridSavedMessage)
+      return
+    }
+    setGridSaving(true)
+    setGridMessage(null)
+    try {
+      const saved = await patchBattleMap(roomId, map.id, body, token)
+      setGridMessage(libraryCopy.gridSavedMessage)
+      onSaved(saved)
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setGridSaving(false)
+    }
+  }, [
+    gridSaving,
+    gridInvalid,
+    gridSize,
+    gridOffsetX,
+    gridOffsetY,
+    map.id,
+    map.revision,
+    map.grid_pixel_size,
+    map.grid_offset_x,
+    map.grid_offset_y,
+    roomId,
+    token,
+    libraryCopy,
+    onSaved,
+    onError,
+  ])
+
+  const imageNaturalSize = useImageNaturalSize(imageUrl)
+  // Draft preview: the grid fields render before Save so the DM can visually
+  // align them; the save above persists these exact effective values. An empty
+  // size keeps the legacy stretch rendering; a positive size with blank
+  // offsets renders with zero offsets.
+  const imageGrid = imageGridFromValues(
+    parseGridPixelSizeInput(gridSize),
+    parseGridOffsetInput(gridOffsetX),
+    parseGridOffsetInput(gridOffsetY),
+  )
+  const imageRect =
+    imageGrid && imageNaturalSize
+      ? battleMapImageRect(imageGrid, imageNaturalSize, BATTLE_MAP_CELL_SIZE)
+      : null
 
   const canvasWalls: CanvasWall[] = useMemo(
     () =>
@@ -788,10 +1244,31 @@ export function BattleMapEditor({
     [placements, selectedPlacementId],
   )
 
+  // M07-D D6d: popover anchor for the selected placement. The token's
+  // on-screen rect comes from the live camera, so the popover follows
+  // pan/zoom and token moves with no extra listeners.
+  const placementPopover = useMemo(() => {
+    if (!monsterMode || !selectedPlacement) return null
+    const footprint = footprintForSizeName(
+      templateForPlacement(selectedPlacement.templateRef)?.size,
+    )
+    const tokenRect = placementTokenScreenRect(
+      selectedPlacement.anchor_x,
+      selectedPlacement.anchor_y,
+      footprint.width,
+      footprint.height,
+      BATTLE_MAP_CELL_SIZE,
+      camera,
+    )
+    return {
+      ...placementPopoverPosition(tokenRect, canvasWrapSize, PLACEMENT_POPOVER_SIZE),
+    }
+  }, [monsterMode, selectedPlacement, templateForPlacement, camera, canvasWrapSize])
+
   const handleCanvasCellClick = useCallback(
-    (x: number, y: number) => {
+    (x: number, y: number, point?: { clientX: number; clientY: number }) => {
       if (monsterMode) {
-        handleMonsterCellClick(x, y)
+        handleMonsterCellClick(x, y, point)
       } else {
         handleCellClick(x, y)
       }
@@ -831,6 +1308,66 @@ export function BattleMapEditor({
     <section className="battle-map-editor" aria-label={copy.tacticalMapEditorTitle}>
       <header className="battle-map-editor__header">
         <h3>{copy.tacticalMapEditorTitle}: {map.name}</h3>
+        <div className="battle-map-editor__toolbar" role="toolbar" aria-label={copy.tacticalMapEditorTitle}>
+          {TOOLS.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={`button secondary compact${tool === t && !monsterMode ? ' battle-map-editor__tool--active' : ''}`}
+              data-testid={`map-editor-tool-${t}`}
+              data-active={tool === t && !monsterMode ? 'true' : undefined}
+              aria-pressed={tool === t && !monsterMode}
+              onClick={() => {
+                // M07-D D6e: geometry tools stay enabled in monster mode; one
+                // click leaves monster mode (selection/popover/drag cleared,
+                // placements kept) and activates the tool.
+                if (monsterMode) leaveMonsterMode()
+                selectTool(t)
+              }}
+            >
+              {toolLabel(t)}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`button secondary compact${monsterMode ? ' battle-map-editor__tool--active' : ''}`}
+            data-testid="map-editor-tool-monster"
+            data-active={monsterMode ? 'true' : undefined}
+            aria-pressed={monsterMode}
+            onClick={() => {
+              if (monsterMode) {
+                leaveMonsterMode()
+              } else {
+                enterMonsterMode()
+              }
+            }}
+          >
+            {copy.tacticalToolMonster}
+          </button>
+          <button
+            type="button"
+            className="button secondary compact"
+            disabled={monsterMode ? placementHistory.length === 0 : history.length === 0}
+            onClick={handleUndo}
+            data-testid="map-editor-undo"
+          >
+            {copy.tacticalToolUndo}
+          </button>
+          <button
+            type="button"
+            className="button secondary compact"
+            onClick={handleEditorFitMap}
+            data-testid="map-editor-fit"
+          >
+            {copy.tacticalToolFitMap}
+          </button>
+          <button type="button" className="button secondary compact" onClick={zoomIn}>
+            {copy.tacticalZoomIn}
+          </button>
+          <button type="button" className="button secondary compact" onClick={zoomOut}>
+            {copy.tacticalZoomOut}
+          </button>
+        </div>
         <div className="battle-map-editor__actions">
           <button
             type="button"
@@ -852,67 +1389,14 @@ export function BattleMapEditor({
         </div>
       </header>
 
-      <div className="battle-map-editor__toolbar" role="toolbar" aria-label={copy.tacticalMapEditorTitle}>
-        {TOOLS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            className={`button secondary compact${tool === t && !monsterMode ? ' battle-map-editor__tool--active' : ''}`}
-            data-testid={`map-editor-tool-${t}`}
-            data-active={tool === t && !monsterMode ? 'true' : undefined}
-            aria-pressed={tool === t && !monsterMode}
-            disabled={monsterMode}
-            onClick={() => selectTool(t)}
-          >
-            {toolLabel(t)}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={`button secondary compact${monsterMode ? ' battle-map-editor__tool--active' : ''}`}
-          data-testid="map-editor-tool-monster"
-          data-active={monsterMode ? 'true' : undefined}
-          aria-pressed={monsterMode}
-          onClick={() => {
-            if (monsterMode) {
-              setMonsterMode(false)
-              setSelectedPlacementId(null)
-            } else {
-              enterMonsterMode()
-            }
-          }}
-        >
-          {copy.tacticalToolMonster}
-        </button>
-        <button
-          type="button"
-          className="button secondary compact"
-          disabled={history.length === 0}
-          onClick={handleUndo}
-          data-testid="map-editor-undo"
-        >
-          {copy.tacticalToolUndo}
-        </button>
-        <button
-          type="button"
-          className="button secondary compact"
-          onClick={() => fitMap(map.width_cells * BATTLE_MAP_CELL_SIZE, map.height_cells * BATTLE_MAP_CELL_SIZE, 800, 600)}
-          data-testid="map-editor-fit"
-        >
-          {copy.tacticalToolFitMap}
-        </button>
-        <button type="button" className="button secondary compact" onClick={zoomIn}>
-          {copy.tacticalZoomIn}
-        </button>
-        <button type="button" className="button secondary compact" onClick={zoomOut}>
-          {copy.tacticalZoomOut}
-        </button>
-      </div>
 
-      {tool === 'terrain' ? (
+      {/* M07-D D6e: tool-specific rows follow the active mode. Geometry rows
+          render only outside monster mode; the monster panel (below) renders
+          only inside it. */}
+      {tool === 'terrain' && !monsterMode ? (
         <div className="battle-map-editor__terrain-picker">
-          <label>
-            {copy.tacticalToolTerrain}:
+          <label className="battle-map-editor__field">
+            <span>{copy.tacticalToolTerrain}</span>
             <select
               value={terrainKind}
               onChange={(e) => setTerrainKind(e.target.value as BattleMapTerrainKind)}
@@ -925,40 +1409,44 @@ export function BattleMapEditor({
         </div>
       ) : null}
 
-      {tool === 'draw' ? (
+      {tool === 'draw' && !monsterMode ? (
         <div className="battle-map-editor__pen-picker" data-testid="map-editor-pen-picker">
-          <span>{copy.tacticalDrawColor}:</span>
-          <div className="battle-map-editor__swatches" role="group" aria-label={copy.tacticalDrawColor}>
-            {DRAWING_COLORS.map((color) => (
-              <button
-                key={color.key}
-                type="button"
-                className={`battle-map-editor__swatch${penColor === color.hex ? ' battle-map-editor__swatch--active' : ''}`}
-                style={{ background: color.hex }}
-                data-testid={`map-editor-color-${color.key}`}
-                aria-label={copy[DRAWING_COLOR_LABEL[color.key]]}
-                aria-pressed={penColor === color.hex}
-                onClick={() => setPenColor(color.hex)}
-              />
-            ))}
+          <div className="battle-map-editor__field">
+            <span>{copy.tacticalDrawColor}</span>
+            <div className="battle-map-editor__swatches" role="group" aria-label={copy.tacticalDrawColor}>
+              {DRAWING_COLORS.map((color) => (
+                <button
+                  key={color.key}
+                  type="button"
+                  className={`battle-map-editor__swatch${penColor === color.hex ? ' battle-map-editor__swatch--active' : ''}`}
+                  style={{ background: color.hex }}
+                  data-testid={`map-editor-color-${color.key}`}
+                  aria-label={copy[DRAWING_COLOR_LABEL[color.key]]}
+                  aria-pressed={penColor === color.hex}
+                  onClick={() => setPenColor(color.hex)}
+                />
+              ))}
+            </div>
           </div>
-          <label>
-            {copy.tacticalDrawWidth}:
-            <input
-              type="range"
-              min={DRAWING_WIDTH_MIN}
-              max={DRAWING_WIDTH_MAX}
-              step={1}
-              value={penWidth}
-              onChange={(e) => setPenWidth(Number(e.target.value))}
-              data-testid="map-editor-pen-width"
-            />
-            <span>{penWidth}</span>
+          <label className="battle-map-editor__field battle-map-editor__field--width">
+            <span>{copy.tacticalDrawWidth}</span>
+            <span className="battle-map-editor__width-row">
+              <input
+                type="range"
+                min={DRAWING_WIDTH_MIN}
+                max={DRAWING_WIDTH_MAX}
+                step={1}
+                value={penWidth}
+                onChange={(e) => setPenWidth(Number(e.target.value))}
+                data-testid="map-editor-pen-width"
+              />
+              <span>{penWidth}</span>
+            </span>
           </label>
         </div>
       ) : null}
 
-      {selectedItem ? (
+      {selectedItem && !monsterMode ? (
         <div className="battle-map-editor__selection" data-testid="map-editor-selection">
           <span>
             {selectedItem.kind === 'wall'
@@ -995,16 +1483,87 @@ export function BattleMapEditor({
         </p>
       ) : null}
 
+      {map.source_kind === 'image' ? (
+        <div className="battle-map-editor__grid-panel" data-testid="map-grid-panel">
+          <h4>{libraryCopy.gridAlignmentHeading}</h4>
+          <p>{libraryCopy.gridAlignmentHint}</p>
+          <div className="battle-map-editor__grid-fields">
+            <label>
+              {libraryCopy.gridPixelSizeLabel}:
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={gridSize}
+                onChange={(e) => setGridSize(e.target.value)}
+                data-testid="map-grid-size"
+              />
+            </label>
+            <label>
+              {libraryCopy.gridOffsetXLabel}:
+              <input
+                type="number"
+                step={1}
+                value={gridOffsetX}
+                onChange={(e) => setGridOffsetX(e.target.value)}
+                data-testid="map-grid-offset-x"
+              />
+            </label>
+            <label>
+              {libraryCopy.gridOffsetYLabel}:
+              <input
+                type="number"
+                step={1}
+                value={gridOffsetY}
+                onChange={(e) => setGridOffsetY(e.target.value)}
+                data-testid="map-grid-offset-y"
+              />
+            </label>
+            <button
+              type="button"
+              className="button secondary compact"
+              disabled={gridSaving || gridInvalid}
+              onClick={() => void handleSaveGrid()}
+              data-testid="map-grid-save"
+            >
+              {gridSaving ? libraryCopy.gridSavingAction : libraryCopy.gridSaveAction}
+            </button>
+          </div>
+          {gridMessage ? (
+            <p
+              className="battle-map-editor__save-message"
+              data-testid="map-grid-save-message"
+            >
+              {gridMessage}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {monsterMode ? (
-        <div className="battle-map-editor__monster-panel" data-testid="monster-placement-panel">
-          <h4>{libraryCopy.monsterPlacementsHeading}</h4>
-          <p>{libraryCopy.monsterPlacementsHint}</p>
+        // M07-D D6e: one compact row at the same height as the other picker
+        // rows (41px controls). No heading block: the heading survives as the
+        // group's accessible name and the hint as a tooltip. Visible labels
+        // become visually-hidden spans (wrapping labels keep the accessible
+        // names); every behaviour testid is unchanged. May wrap on narrow
+        // widths.
+        <div
+          className="battle-map-editor__monster-panel"
+          data-testid="monster-placement-panel"
+          role="group"
+          aria-label={libraryCopy.monsterPlacementsHeading}
+          title={libraryCopy.monsterPlacementsHint}
+        >
           {templates === null ? (
-            <p>{libraryCopy.monsterPlacementLoadingTemplates}</p>
+            <p className="battle-map-editor__monster-loading">
+              {libraryCopy.monsterPlacementLoadingTemplates}
+            </p>
           ) : (
             <div className="battle-map-editor__monster-picker">
-              <label>
-                {libraryCopy.monsterTemplateSearchLabel}:
+              <label className="battle-map-editor__field battle-map-editor__field--search">
+                <span className="battle-map-editor__field-label-sr">
+                  {libraryCopy.monsterTemplateSearchLabel}
+                </span>
                 <input
                   type="search"
                   value={templateSearch}
@@ -1013,8 +1572,10 @@ export function BattleMapEditor({
                   data-testid="monster-placement-template-search"
                 />
               </label>
-              <label>
-                {libraryCopy.monsterTemplatePickerLabel}:
+              <label className="battle-map-editor__field battle-map-editor__field--template">
+                <span className="battle-map-editor__field-label-sr">
+                  {libraryCopy.monsterTemplatePickerLabel}
+                </span>
                 <select
                   value={selectedTemplateRef}
                   onChange={(e) => {
@@ -1065,8 +1626,10 @@ export function BattleMapEditor({
               {!templatesLoading && availableTemplates.length === 0 && templateSearch.trim() ? (
                 <p className="room-empty-text">{libraryCopy.monsterTemplateNoMatch}</p>
               ) : null}
-              <label>
-                {libraryCopy.monsterPlacementVisibilityLabel}:
+              <label className="battle-map-editor__field battle-map-editor__field--visibility">
+                <span className="battle-map-editor__field-label-sr">
+                  {libraryCopy.monsterPlacementVisibilityLabel}
+                </span>
                 <select
                   value={newPlacementVisibility}
                   onChange={(e) =>
@@ -1093,41 +1656,6 @@ export function BattleMapEditor({
               </button>
             </div>
           )}
-          {selectedPlacement ? (
-            <div
-              className="battle-map-editor__monster-selection"
-              data-testid="monster-placement-selection"
-              data-placement-id={selectedPlacement.clientId}
-              data-problem={
-                problemPlacementIds.has(selectedPlacement.clientId) ? 'true' : undefined
-              }
-            >
-              <span>{placementDisplayName(selectedPlacement)}</span>
-              {templateForPlacement(selectedPlacement.templateRef)?.archived_at ? (
-                <span className="badge warning">{libraryCopy.monsterPlacementArchivedBadge}</span>
-              ) : null}
-              <button
-                type="button"
-                className="button secondary compact"
-                onClick={togglePlacementHidden}
-                data-testid="monster-placement-toggle-hidden"
-                data-hidden={selectedPlacement.visibility === 'hidden' ? 'true' : undefined}
-              >
-                {libraryCopy.monsterPlacementVisibilityLabel}:{' '}
-                {selectedPlacement.visibility === 'hidden'
-                  ? libraryCopy.monsterVisibilityHidden
-                  : libraryCopy.monsterVisibilityPublic}
-              </button>
-              <button
-                type="button"
-                className="button secondary compact"
-                onClick={removeSelectedPlacement}
-                data-testid="monster-placement-remove"
-              >
-                {libraryCopy.monsterPlacementRemove}
-              </button>
-            </div>
-          ) : null}
           {placementsMessage ? (
             <p
               className="battle-map-editor__save-message"
@@ -1180,13 +1708,15 @@ export function BattleMapEditor({
           heightCells={map.height_cells}
           walls={canvasWalls}
           doors={canvasDoors}
+          doorStateLabel={(state) => doorStateLabel(copy, state)}
           terrain={canvasTerrain}
           drawings={working.drawings}
-          tokens={monsterMode ? placementTokens : []}
+          tokens={placementTokens}
           imageUrl={imageUrl}
+          imageRect={imageRect}
           camera={camera}
           isDm={true}
-          selectedEntryId={monsterMode ? selectedPlacementId : selectedId}
+          selectedEntryId={monsterMode ? selectedPlacementId : null}
           selectedObjectId={selectedId}
           highlightSegment={highlightSegment}
           highlightCell={highlightCell}
@@ -1195,9 +1725,81 @@ export function BattleMapEditor({
           previewDrawingPoints={previewDrawingPoints}
           previewDrawingStroke={{ color: penColor, width: penWidth }}
           onCellClick={handleCanvasCellClick}
+          // M07-D D6f: placements render in every tool mode. Outside monster
+          // mode they are dimmed and ignore pointer events, so wall/door/
+          // terrain/draw/erase/select clicks and drags always hit the grid.
+          tokensInteractive={monsterMode}
+          tokensDimmed={!monsterMode}
           onTokenClick={monsterMode ? handlePlacementTokenClick : undefined}
+          onTokenPointerDown={monsterMode ? handlePlacementTokenPointerDown : undefined}
+          onCellPointerEnter={monsterMode ? handlePlacementCellPointerEnter : undefined}
+          onPointerUp={monsterMode ? handlePlacementPointerUp : undefined}
           onWheel={handleWheel}
         />
+        {placementPopover && selectedPlacement ? (
+          <div
+            className="battle-map-editor__placement-popover"
+            data-testid="monster-placement-popover"
+            style={{ left: placementPopover.left, top: placementPopover.top }}
+          >
+            <div
+              className="battle-map-editor__placement-card"
+              data-testid="monster-placement-selection"
+              data-placement-id={selectedPlacement.clientId}
+              data-problem={
+                problemPlacementIds.has(selectedPlacement.clientId) ? 'true' : undefined
+              }
+            >
+              <div className="battle-map-editor__placement-card-header">
+                <span className="battle-map-editor__placement-card-name">
+                  {placementDisplayName(selectedPlacement)}
+                </span>
+                <button
+                  type="button"
+                  className="battle-map-editor__placement-card-close"
+                  onClick={() => setSelectedPlacementId(null)}
+                  data-testid="monster-placement-popover-close"
+                  aria-label={copy.close}
+                >
+                  ×
+                </button>
+              </div>
+              {templateForPlacement(selectedPlacement.templateRef)?.archived_at ? (
+                <span className="badge warning">{libraryCopy.monsterPlacementArchivedBadge}</span>
+              ) : null}
+              <div className="battle-map-editor__placement-card-actions">
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  onClick={togglePlacementHidden}
+                  data-testid="monster-placement-toggle-hidden"
+                  data-hidden={selectedPlacement.visibility === 'hidden' ? 'true' : undefined}
+                >
+                  {libraryCopy.monsterPlacementVisibilityLabel}:{' '}
+                  {selectedPlacement.visibility === 'hidden'
+                    ? libraryCopy.monsterVisibilityHidden
+                    : libraryCopy.monsterVisibilityPublic}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  onClick={removeSelectedPlacement}
+                  data-testid="monster-placement-remove"
+                >
+                  {libraryCopy.monsterPlacementRemove}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  onClick={copySelectedPlacement}
+                  data-testid="monster-placement-copy"
+                >
+                  {copy.tacticalMonsterPlacementCopy}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
       <div
         className="battle-map-editor__resize-handle"

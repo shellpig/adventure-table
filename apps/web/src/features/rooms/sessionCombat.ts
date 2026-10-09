@@ -17,6 +17,7 @@ import {
 import type { TableEvent } from '../../api/sessions'
 import type { SearchOption } from '../../components/SearchableSelect'
 import { useContentPresentations } from '../../i18n/useContentPresentations'
+import { formatChallengeRating } from './monsterLibraryCopy'
 import type { SessionCopy } from './sessionCopy'
 
 const EMPTY_PENDING_COMBAT_ROLLS: CombatPendingRollView[] = []
@@ -378,7 +379,8 @@ export function useMonsterOptions(enabled = true): SearchOption[] {
         return {
           value: entry.key,
           label: nameFor(entry.key, entry.name),
-          description: cr !== undefined && cr !== null ? `CR ${String(cr)}` : undefined,
+          description:
+            typeof cr === 'number' ? `CR ${formatChallengeRating(cr)}` : cr != null ? `CR ${String(cr)}` : undefined,
           searchAliases: searchAliasesFor(entry.key, entry.name),
         }
       }),

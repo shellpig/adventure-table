@@ -78,6 +78,13 @@ class MonsterBookkeepingRepository:
                 new_name = str(name).strip()
                 instance_updates["name"] = new_name
                 changed_fields.append("name")
+                # M07-D D1 (F15): a DM rename marks the presentation custom
+                # while keeping the original locale names snapshot for history.
+                rules_snapshot = dict(instance_row["rules_snapshot"] or {})
+                presentation = dict(rules_snapshot.get("presentation") or {})
+                presentation["name_is_custom"] = True
+                rules_snapshot["presentation"] = presentation
+                instance_updates["rules_snapshot"] = rules_snapshot
             else:
                 new_name = instance_row["name"]
 

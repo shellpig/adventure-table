@@ -254,17 +254,6 @@ class CombatRepository:
             ).mappings().all()
         return tuple(self._entry(row) for row in rows)
 
-    def has_active_hostile(self, combat_id: UUID) -> bool:
-        with self.engine.connect() as connection:
-            hostile_id = connection.execute(
-                select(combat_entries.c.id).where(
-                    combat_entries.c.combat_id == combat_id,
-                    combat_entries.c.status == "active",
-                    combat_entries.c.is_hostile.is_(True),
-                ).limit(1)
-            ).scalar_one_or_none()
-        return hostile_id is not None
-
     def entries_for_initiative_request(self, combat_id: UUID, request_id: UUID) -> tuple[StoredCombatEntry, ...]:
         with self.engine.connect() as connection:
             rows = connection.execute(select(combat_entries).where(

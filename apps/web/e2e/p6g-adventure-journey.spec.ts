@@ -624,6 +624,15 @@ test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-ba
     const MAX_ATTACK_ROUNDS = 6
     let resolution: AttackResolution | null = null
     for (let round = 0; round < MAX_ATTACK_ROUNDS && !resolution?.hit; round += 1) {
+      if (round > 0) {
+        // A miss spends the hero's action while it is still the hero's turn,
+        // so pass the turn before advancing back to the hero.
+        const advanced = page.waitForResponse((response) => (
+          response.request().method() === 'POST' && response.url().includes('/combat/turn/advance')
+        ))
+        await page.getByRole('button', { name: 'Advance Turn' }).click()
+        await responseJson(await advanced)
+      }
       await advanceUntilTurn(page, request, activePrefix, heroEntry.id)
       await expect(combatStage(player.page).locator('.session-combat__your-turn-badge')).toBeVisible()
       resolution = await playerAttack(page, player.page, sessionId, QUICK_ENEMY.name)
@@ -674,9 +683,10 @@ test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-ba
     const combatEvents = await json<EventPage>(
       await request.get(`${activePrefix}/events?after=0&limit=100`),
     )
-    const dmAttackEvent = combatEvents.events.find(
+    // Earlier misses also emit attack resolutions; the hit is the last one.
+    const dmAttackEvent = combatEvents.events.filter(
       (e) => e.kind === 'roll.resolved' && Boolean(e.payload.attack_resolution),
-    )
+    ).at(-1)
     expect(dmAttackEvent).toBeDefined()
     const dmResolution = dmAttackEvent!.payload.attack_resolution as {
       attack: { target_ac: number }
@@ -691,9 +701,9 @@ test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-ba
         headers: { Authorization: `Bearer ${playerGrant.access_token}` },
       }),
     )
-    const playerAttackEvent = playerCombatEvents.events.find(
+    const playerAttackEvent = playerCombatEvents.events.filter(
       (e) => e.kind === 'roll.resolved' && Boolean(e.payload.attack_resolution),
-    )
+    ).at(-1)
     expect(playerAttackEvent).toBeDefined()
     const playerResolution = playerAttackEvent!.payload.attack_resolution as {
       attack: Record<string, unknown>
@@ -966,7 +976,11 @@ test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-ba
     await expect(page.getByRole('heading', { name: 'Lobby & Seats', level: 1 })).toBeVisible()
 
     await expect(page.locator('article.seat-card').filter({ hasText: 'P6-G DM' })).toBeVisible()
-    const playerSeatCard = page.locator('article.seat-card').filter({ hasText: 'P6-G Player' })
+    // Match the seat heading: the DM seat's Controller picker also lists the
+    // Player member as an option, so a text filter would hit both cards.
+    const playerSeatCard = page
+      .locator('article.seat-card')
+      .filter({ has: page.getByRole('heading', { name: 'P6-G Player', level: 2 }) })
     await expect(playerSeatCard).toBeVisible()
     await expect(playerSeatCard).toContainText(character.name)
 

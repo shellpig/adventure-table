@@ -27,12 +27,25 @@ from app.domain.adventures.schemas import (
     AdventureStatusError,
 )
 from app.domain.adventures.service import AdventureService
+from app.domain.monster_library.errors import (
+    InvalidMonsterTemplateRefError,
+    MonsterTemplateArchivedError,
+    MonsterTemplateNotFoundError,
+)
 from app.domain.rooms.schemas import RoomAccessContext
 
 router = APIRouter(prefix="/api/rooms/{room_id}/adventures", tags=["room-adventures"])
 
 
 def _map_adventure_error(exc: Exception) -> APIError:
+    # M07-D D1 (F07): monster template errors share the M07-A machine codes
+    # (also reached via the adventure-import fallthrough mapper).
+    if isinstance(exc, MonsterTemplateNotFoundError):
+        return APIError(404, "monster_template_not_found", str(exc))
+    if isinstance(exc, MonsterTemplateArchivedError):
+        return APIError(409, "monster_template_archived", str(exc))
+    if isinstance(exc, InvalidMonsterTemplateRefError):
+        return APIError(422, "invalid_monster_template_ref", str(exc))
     if isinstance(exc, (AdventureNotFoundError, AdventureForbiddenError)):
         return APIError(404, "adventure_not_found", str(exc))
     if isinstance(exc, AdventureEntryNotFoundError):

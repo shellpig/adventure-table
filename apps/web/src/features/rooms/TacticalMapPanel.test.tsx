@@ -18,7 +18,7 @@ vi.mock('../../api/tacticalCombat', async (importOriginal) => {
 })
 
 vi.mock('../../api/battleMaps', () => ({
-  getBattleMap: vi.fn().mockResolvedValue(null),
+  getSessionBattleMap: vi.fn().mockResolvedValue(null),
 }))
 
 const baseCombat = {
@@ -138,5 +138,21 @@ describe('TacticalMapPanel', () => {
     } as never
     expect(doorIsHidden(door, battleMap)).toBe(true)
     expect(doorIsHidden(door, null)).toBe(false)
+  })
+
+  it('M07-D F14/F18: session-scoped map read and shared display-name rule', async () => {
+    const { readFileSync } = await import('node:fs')
+    const source = readFileSync(new URL('./TacticalMapPanel.tsx', import.meta.url), 'utf8')
+    // DM map definition comes from the Session read-only route, not the
+    // management route, so a non-Owner current DM is allowed.
+    expect(source).toContain('getSessionBattleMap(')
+    expect(source).toContain('const map = await getSessionBattleMap(')
+    expect(source).toContain('view.source_battle_map_id,')
+    expect(source).not.toContain('getBattleMap(roomId,')
+    // Token labels use the same rule as Stage/ActionBar (F15 rename path included).
+    expect(source).toContain('combatEntryDisplayName(combat, entry, copy.locale)')
+    // Board background honours the saved grid alignment when present.
+    expect(source).toContain('imageGridFromValues(board.grid_pixel_size')
+    expect(source).toContain('imageRect={boardImageRect}')
   })
 })

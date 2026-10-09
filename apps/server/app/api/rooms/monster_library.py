@@ -9,6 +9,7 @@ from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.dependencies import get_monster_library_service
 from app.domain.monster_library.errors import (
+    InvalidMonsterLibraryFilterError,
     InvalidMonsterRulesError,
     InvalidMonsterTemplateRefError,
     MonsterLibraryForbiddenError,
@@ -50,6 +51,8 @@ def _map_library_error(exc: Exception) -> APIError:
         return APIError(409, "monster_template_referenced", str(exc))
     if isinstance(exc, MonsterTemplateArchivedError):
         return APIError(409, "monster_template_archived", str(exc))
+    if isinstance(exc, InvalidMonsterLibraryFilterError):
+        return APIError(422, "invalid_monster_library_filter", str(exc))
     if isinstance(exc, (InvalidMonsterTemplateRefError, InvalidMonsterRulesError, ValueError)):
         return APIError(422, "invalid_monster_template_ref", str(exc))
     raise exc
@@ -63,6 +66,13 @@ def list_monster_library(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     source: str = Query(default="all"),
+    sort: str = Query(default="name"),
+    order: str = Query(default="asc"),
+    size: str | None = Query(default=None),
+    monster_type: str | None = Query(default=None, alias="type"),
+    cr_eq: float | None = Query(default=None),
+    cr_min: float | None = Query(default=None),
+    cr_max: float | None = Query(default=None),
     context: RoomAccessContext = Depends(get_room_access_context),
     service: MonsterLibraryService = Depends(get_monster_library_service),
 ) -> list[MonsterLibrarySummaryView]:
@@ -75,6 +85,13 @@ def list_monster_library(
             limit=limit,
             offset=offset,
             source=source,
+            sort=sort,
+            order=order,
+            size=size,
+            monster_type=monster_type,
+            cr_eq=cr_eq,
+            cr_min=cr_min,
+            cr_max=cr_max,
         )
     except Exception as exc:
         raise _map_library_error(exc) from exc

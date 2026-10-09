@@ -13,6 +13,7 @@ export type MonsterLibrarySummaryView = {
   armor_class?: number | null
   max_hp?: number | null
   challenge_rating?: number | null
+  walk_speed?: number | null
   archived_at?: string | null
   revision?: number | null
 }
@@ -212,12 +213,28 @@ export type ArchiveCustomMonsterInput = {
   expected_revision: number
 }
 
+export type MonsterLibrarySortField =
+  | 'name'
+  | 'armor_class'
+  | 'max_hp'
+  | 'challenge_rating'
+  | 'walk_speed'
+
+export type MonsterLibrarySortOrder = 'asc' | 'desc'
+
 export type MonsterLibraryListOptions = {
   query?: string
   include_archived?: boolean
   limit?: number
   offset?: number
   source?: 'all' | 'builtin' | 'custom' | string
+  sort?: MonsterLibrarySortField | string
+  order?: MonsterLibrarySortOrder | string
+  size?: string
+  type?: string
+  cr_eq?: number
+  cr_min?: number
+  cr_max?: number
 }
 
 type ApiErrorPayload = { error?: { code?: string; message?: string } }
@@ -265,12 +282,7 @@ async function request<T>(url: string, accessToken: string, init?: RequestInit):
 
 const base = (roomId: string) => `/api/rooms/${roomId}/monster-library`
 
-export function listMonsterLibrary(
-  roomId: string,
-  token: string,
-  options?: MonsterLibraryListOptions,
-): Promise<MonsterLibrarySummaryView[]> {
-  const params = new URLSearchParams()
+function appendLibraryListParams(params: URLSearchParams, options?: MonsterLibraryListOptions) {
   if (options?.query) params.set('query', options.query)
   if (options?.include_archived !== undefined) {
     params.set('include_archived', String(options.include_archived))
@@ -278,6 +290,22 @@ export function listMonsterLibrary(
   if (options?.limit !== undefined) params.set('limit', String(options.limit))
   if (options?.offset !== undefined) params.set('offset', String(options.offset))
   if (options?.source) params.set('source', options.source)
+  if (options?.sort) params.set('sort', options.sort)
+  if (options?.order) params.set('order', options.order)
+  if (options?.size) params.set('size', options.size)
+  if (options?.type) params.set('type', options.type)
+  if (options?.cr_eq !== undefined) params.set('cr_eq', String(options.cr_eq))
+  if (options?.cr_min !== undefined) params.set('cr_min', String(options.cr_min))
+  if (options?.cr_max !== undefined) params.set('cr_max', String(options.cr_max))
+}
+
+export function listMonsterLibrary(
+  roomId: string,
+  token: string,
+  options?: MonsterLibraryListOptions,
+): Promise<MonsterLibrarySummaryView[]> {
+  const params = new URLSearchParams()
+  appendLibraryListParams(params, options)
   const qs = params.toString()
   return request(qs ? `${base(roomId)}?${qs}` : base(roomId), token)
 }
@@ -288,6 +316,48 @@ export function getMonsterLibraryEntry(
   token: string,
 ): Promise<MonsterLibraryDetailView> {
   return request(`${base(roomId)}/${encodeURIComponent(ref)}`, token)
+}
+
+const sessionLibrariesBase = (
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+) => `/api/rooms/${roomId}/campaigns/${campaignId}/sessions/${sessionId}/libraries`
+
+function sessionMonsterLibraryQuery(options?: MonsterLibraryListOptions): string {
+  const params = new URLSearchParams()
+  appendLibraryListParams(params, options)
+  return params.toString()
+}
+
+/**
+ * M07-D D2 (F14): Session-scoped read-only monster library reads for the
+ * current DM. Same response models as the management routes; usable by a
+ * non-Owner Human sitting on the current DM Seat.
+ */
+export function listSessionMonsterLibrary(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+  options?: MonsterLibraryListOptions,
+): Promise<MonsterLibrarySummaryView[]> {
+  const qs = sessionMonsterLibraryQuery(options)
+  const url = `${sessionLibrariesBase(roomId, campaignId, sessionId)}/monster-library`
+  return request(qs ? `${url}?${qs}` : url, token)
+}
+
+export function getSessionMonsterLibraryEntry(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  ref: string,
+  token: string,
+): Promise<MonsterLibraryDetailView> {
+  return request(
+    `${sessionLibrariesBase(roomId, campaignId, sessionId)}/monster-library/${encodeURIComponent(ref)}`,
+    token,
+  )
 }
 
 export function createCustomMonster(

@@ -83,6 +83,30 @@ export function computeCenterOn(
 
 export type PinchPoint = { x: number; y: number }
 
+/** Fallback canvas size while the map wrapper is not laid out yet. */
+export const VIEWPORT_FALLBACK_WIDTH = 800
+export const VIEWPORT_FALLBACK_HEIGHT = 600
+
+/**
+ * Real canvas size of a map wrapper element. Falls back to 800x600 while the
+ * element is missing or has no laid-out size yet (first paint, hidden tab).
+ * The battle-map SVG sits at the wrapper's top-left at its natural map pixel
+ * size, so this is exactly the viewport computeFitMap/computeCenterOn expect.
+ */
+export function resolveViewportSize(
+  element: { getBoundingClientRect(): { width: number; height: number } } | null | undefined,
+  fallbackWidth = VIEWPORT_FALLBACK_WIDTH,
+  fallbackHeight = VIEWPORT_FALLBACK_HEIGHT,
+): { width: number; height: number } {
+  if (element) {
+    const rect = element.getBoundingClientRect()
+    if (rect.width > 0 && rect.height > 0) {
+      return { width: rect.width, height: rect.height }
+    }
+  }
+  return { width: fallbackWidth, height: fallbackHeight }
+}
+
 export function pinchDistance(p1: PinchPoint, p2: PinchPoint): number {
   return Math.hypot(p2.x - p1.x, p2.y - p1.y)
 }

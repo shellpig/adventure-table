@@ -1,6 +1,6 @@
 # Roadmap 歷史進度
 
-最後整理：2026-10-02
+最後整理：2026-10-09
 
 本檔保存已關門 Subphase 的進度表與關門摘要，不是開場必讀，也不定義當前工作。當前狀態、下一步與未來 Roadmap 只看 [PROJECT_BRIEF.md](../PROJECT_BRIEF.md)。M01／U01 整體保持 open，其已關門 Subphase 同樣歸入本檔。
 
@@ -174,6 +174,15 @@
 | **P5-F — Tactical Combat UI & AI Tool Surface** | ✅ 2026-09-28 | 地圖編輯器、Tactical Stage、Player 拖曳只產生 plan、MCP tactical tools 與 `combat["tactical"]` context；[closeout](../docs/P5/P5-F_CLOSEOUT.md)，merge `72395df3` |
 | **P5-G — Full P5 Integration & Closeout** | 🟡 2026-10-02 | G.3 PostgreSQL restart、G.4 併發 stale、G.6 secrecy matrix、Quick regression＋Tactical full journey＋地圖編輯器存檔 E2E；§4 人工驗收修正 G2e～G2i（含 P5-F 漏做的 Free Drawing、`normal` 地形 migration `0040`、編輯器新物件存檔 422）；全套 backend 3,087 passed、全套 Docker E2E 146 passed；**G.5 真實 AI gate 由使用者延後**；[closeout](../docs/P5/P5-G_CLOSEOUT.md)。**P5 Phase 至此關門** |
 
+### M07
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **M07-A — Room Monster Library** | ✅ 2026-10-03 | Room 範圍怪物庫：內建 SRD 唯讀查詢、複製成自訂、typed patch＋revision、封存、未引用刪除、從 Instance 保存；內建 desc 英文原文標示例外；[closeout](../docs/M07/M07-A_CLOSEOUT.md)，merge `89a78a74` |
+| **M07-B — Map Library Lifecycle & AI DM Boundary** | ✅ 2026-10-04 | Room 地圖庫生命週期（複製、封存、引用保護）與 AI DM 權限邊界；[closeout](../docs/M07/M07-B_CLOSEOUT.md)，merge `5b984d4c` |
+| **M07-C — Map Monster Placement & Combat Load** | ✅ 2026-10-04 | 地圖怪物預配置（migration `0043`）、「只載入地圖」與「地圖＋怪物」開戰、最新模板整批驗證、hidden 保密、idempotency 與 PG race；[closeout](../docs/M07/M07-C_CLOSEOUT.md)，merge `e6265e64` |
+| **M07-D — Full M07 Integration & Closeout** | 🟡 2026-10-09 | A～C 外部審查修補（事件 secrecy、canonical ref、Session 唯讀庫、Member Human DM）、真 PG migration 與 browser 整合旅程、P7 交接、怪物庫排序篩選（D.4）、D5 真人回饋 UI 修補；全套 backend 3,306 passed；真人 H01／H02／H04／H14 PASS，**地圖戰鬥真人驗收（H03、H05～H13）與真實 AI client 延後**；[closeout](../docs/M07/M07-D_CLOSEOUT.md)。**M07 Phase 至此全部關門** |
+
 ## 已解限制的歷史記錄
 
 | 項目 | 當時結論 | 證據 |
@@ -199,3 +208,4 @@
 | P5 | [規格](P5/實作規格.md) | [設計](P5/開發設計方針.md) | [測試](P5/測試指南.md) |
 | P6 | [規格](P6/實作規格.md) | [設計](P6/開發設計方針.md) | [測試](P6/測試指南.md) |
 | M06 | [規格](M06/實作規格.md) | [設計](M06/開發設計方針.md) | [測試](M06/測試指南.md) |
+| M07 | [規格](M07/實作規格.md) | [設計](M07/開發設計方針.md) | [測試](M07/測試指南.md) |
