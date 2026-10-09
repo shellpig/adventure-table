@@ -966,7 +966,11 @@ test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-ba
     await expect(page.getByRole('heading', { name: 'Lobby & Seats', level: 1 })).toBeVisible()
 
     await expect(page.locator('article.seat-card').filter({ hasText: 'P6-G DM' })).toBeVisible()
-    const playerSeatCard = page.locator('article.seat-card').filter({ hasText: 'P6-G Player' })
+    // Match the seat heading: the DM seat's Controller picker also lists the
+    // Player member as an option, so a text filter would hit both cards.
+    const playerSeatCard = page
+      .locator('article.seat-card')
+      .filter({ has: page.getByRole('heading', { name: 'P6-G Player', level: 2 }) })
     await expect(playerSeatCard).toBeVisible()
     await expect(playerSeatCard).toContainText(character.name)
 
