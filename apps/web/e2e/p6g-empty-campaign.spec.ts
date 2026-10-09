@@ -464,9 +464,10 @@ test('P6-G G1b-2: empty Campaign through narration, combat, Current Situation, a
     const combatEvents = await json<EventPage>(
       await request.get(`${activePrefix}/events?after=0&limit=100`),
     )
-    const dmAttackEvent = combatEvents.events.find(
+    // Earlier misses also emit attack resolutions; the hit is the last one.
+    const dmAttackEvent = combatEvents.events.filter(
       (e) => e.kind === 'roll.resolved' && Boolean(e.payload.attack_resolution),
-    )
+    ).at(-1)
     expect(dmAttackEvent).toBeDefined()
     const dmResolution = dmAttackEvent!.payload.attack_resolution as {
       attack: { target_ac: number }
@@ -481,9 +482,9 @@ test('P6-G G1b-2: empty Campaign through narration, combat, Current Situation, a
         headers: { Authorization: `Bearer ${playerGrant.access_token}` },
       }),
     )
-    const playerAttackEvent = playerCombatEvents.events.find(
+    const playerAttackEvent = playerCombatEvents.events.filter(
       (e) => e.kind === 'roll.resolved' && Boolean(e.payload.attack_resolution),
-    )
+    ).at(-1)
     expect(playerAttackEvent).toBeDefined()
     const playerResolution = playerAttackEvent!.payload.attack_resolution as {
       attack: Record<string, unknown>
