@@ -2254,18 +2254,27 @@
 
 .battle-map__token rect {
   fill: #1a2230;
-  stroke: var(--line);
-  stroke-width: 1.5;
+  stroke: #d8dee9;
+  stroke-width: 2;
 }
 
 .battle-map__token--selected rect {
   stroke: var(--gold-bright);
-  stroke-width: 2;
+  stroke-width: 3;
 }
 
+/* Hidden tokens keep a full-strength outline so the dashes stay readable;
+   only the fill is faded. */
 .battle-map__token--hidden rect {
-  stroke-dasharray: 4 3;
-  opacity: 0.75;
+  stroke-dasharray: 6 4;
+  fill-opacity: 0.6;
+}
+
+/* M07-D D6f: placements stay visible outside monster mode, dimmed and
+   non-interactive so geometry clicks and drags always hit the grid. The
+   hidden dashed marker above still applies on top of the dimming. */
+.battle-map__token--dimmed {
+  opacity: 0.45;
 }
 
 .battle-map__token text {

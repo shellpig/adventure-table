@@ -209,6 +209,61 @@ describe('BattleMapCanvas hidden rendering', () => {
     expect(html).not.toContain('pointer-events:none')
   })
 
+  it('dims tokens with battle-map__token--dimmed when tokensDimmed is true', () => {
+    const dimmed = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => state}
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[
+          {
+            entry_id: 'entry-1',
+            name: 'Goblin',
+            anchor_x: 2,
+            anchor_y: 3,
+            footprint_width: 1,
+            footprint_height: 1,
+            isHidden: true,
+          },
+        ]}
+        camera={camera}
+        isDm={false}
+        tokensInteractive={false}
+        tokensDimmed
+      />,
+    )
+    expect(dimmed).toContain('battle-map__token--dimmed')
+    // The DM hidden marker survives dimming.
+    expect(dimmed).toContain('battle-map__token--hidden')
+
+    const normal = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => state}
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[
+          {
+            entry_id: 'entry-1',
+            name: 'Goblin',
+            anchor_x: 2,
+            anchor_y: 3,
+            footprint_width: 1,
+            footprint_height: 1,
+          },
+        ]}
+        camera={camera}
+        isDm={false}
+      />,
+    )
+    expect(normal).not.toContain('battle-map__token--dimmed')
+  })
+
   it('renders selected wall with battle-map__wall--selected class and data-selected attribute', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas

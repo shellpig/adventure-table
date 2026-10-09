@@ -98,6 +98,12 @@ type BattleMapCanvasProps = {
   aoeOrigin?: { x: number; y: number } | null
   /** Whether tokens intercept pointer events (false during AoE targeting). */
   tokensInteractive?: boolean
+  /**
+   * M07-D D6f: dim placement tokens outside monster mode (map editor shows
+   * placements in every tool mode). Opacity only; the token data and the
+   * DM hidden marker styling are unchanged.
+   */
+  tokensDimmed?: boolean
 }
 
 const TERRAIN_COLORS: Record<string, string> = {
@@ -178,6 +184,7 @@ export function BattleMapCanvas({
   aoeCells,
   aoeOrigin,
   tokensInteractive = true,
+  tokensDimmed = false,
 }: BattleMapCanvasProps) {
   const mapWidth = widthCells * cellSize
   const mapHeight = heightCells * cellSize
@@ -445,7 +452,7 @@ export function BattleMapCanvas({
               data-entry-id={token.entry_id}
               data-selected={isSelected ? 'true' : undefined}
               data-hidden={token.isHidden ? 'true' : undefined}
-              className={`battle-map__token${isSelected ? ' battle-map__token--selected' : ''}${token.isHidden ? ' battle-map__token--hidden' : ''}`}
+              className={`battle-map__token${isSelected ? ' battle-map__token--selected' : ''}${token.isHidden ? ' battle-map__token--hidden' : ''}${tokensDimmed ? ' battle-map__token--dimmed' : ''}`}
               onClick={(e) => {
                 e.stopPropagation()
                 onTokenClick?.(token.entry_id)

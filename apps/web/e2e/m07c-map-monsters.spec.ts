@@ -936,6 +936,89 @@ test('M07-D D6e Ctrl+Z undoes a placement move, then the placement', async ({
   await expect(page.getByTestId('monster-placement-selection')).toHaveCount(0)
 })
 
+test('M07-D D6f placements stay visible outside monster mode and copy duplicates adjacent', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D D6f Visible Copy'
+  await createBlankMap(request, roomId, mapName, 12, 10)
+
+  await openLibraryEditor(page, roomId, mapName)
+  await enterMonsterMode(page)
+  await searchTemplate(page, 'Goblin')
+  await placeTemplateAt(page, GOBLIN_REF, 'public', 5, 2)
+  await searchTemplate(page, 'Acolyte')
+  await placeTemplateAt(page, ACOLYTE_REF, 'hidden', 7, 2)
+  await expect(editorTokens(page)).toHaveCount(2)
+
+  // Record the Goblin placement id for the copy assertions below.
+  const selectGoblin = async () => {
+    const at = await mapPoint(page, 5.5, 2.5)
+    await page.mouse.click(at.x, at.y)
+    await expect(page.getByTestId('monster-placement-selection')).toBeVisible()
+  }
+  await selectGoblin()
+  const selection = page.getByTestId('monster-placement-selection')
+  const sourceId = await selection.getAttribute('data-placement-id')
+  expect(sourceId).toBeTruthy()
+
+  // Leave monster mode for the Wall tool: placements stay visible, dimmed
+  // and non-interactive, and the hidden marker survives the mode switch.
+  await page.getByTestId('map-editor-tool-wall').click()
+  await expect(page.getByTestId('monster-placement-panel')).toHaveCount(0)
+  await expect(editorTokens(page)).toHaveCount(2)
+  await expect(editorTokens(page, '[data-hidden="true"]')).toHaveCount(1)
+  await expect(page.getByTestId('battle-map-tokens')).toHaveAttribute('pointer-events', 'none')
+  await expect(editorTokens(page).first()).toHaveClass(/battle-map__token--dimmed/)
+  await expect(selection).toHaveCount(0)
+
+  // Clicking straight on a token hits the grid, not the placement: no
+  // popover appears, and the click lands a wall like any grid click.
+  const tokenCenter = await mapPoint(page, 5.5, 2.5)
+  await page.mouse.click(tokenCenter.x, tokenCenter.y)
+  await expect(selection).toHaveCount(0)
+  const walls = page.getByTestId('map-editor-canvas').getByTestId('battle-map-wall')
+  await expect(walls).toHaveCount(1)
+
+  // A wall click on a cell edge next to the token still creates a wall.
+  const wallAt = await mapPoint(page, 4.5, 2.05)
+  await page.mouse.click(wallAt.x, wallAt.y)
+  await expect(walls).toHaveCount(2)
+
+  // Back in monster mode the tokens render normally and stay interactive.
+  await enterMonsterMode(page)
+  await expect(editorTokens(page)).toHaveCount(2)
+  await expect(editorTokens(page).first()).not.toHaveClass(/battle-map__token--dimmed/)
+  await selectGoblin()
+  await expect(selection).toHaveAttribute('data-placement-id', sourceId!)
+
+  // Copy duplicates the source adjacent with the same visibility, and the
+  // popover follows the copy so it can be dragged right away.
+  const undo = page.getByTestId('map-editor-undo')
+  await page.getByTestId('monster-placement-copy').click()
+  await expect(editorTokens(page)).toHaveCount(3)
+  const copiedId = await selection.getAttribute('data-placement-id')
+  expect(copiedId).toBeTruthy()
+  expect(copiedId).not.toBe(sourceId)
+  // Nearest free anchor: ring 1 from (5, 2) scans dy/dx ascending, so (4, 1).
+  const copiedToken = editorTokens(page, `[data-entry-id="${copiedId}"]`)
+  await expect(copiedToken.locator('rect')).toHaveAttribute('x', String(4 * CELL_SIZE))
+  await expect(copiedToken.locator('rect')).toHaveAttribute('y', String(1 * CELL_SIZE))
+  await expect(copiedToken).not.toHaveAttribute('data-hidden', 'true')
+  await expect(editorTokens(page, '[data-hidden="true"]')).toHaveCount(1)
+  await expect(undo).toBeEnabled()
+
+  // One Ctrl+Z removes the copy (and its popover); the walls painted
+  // outside monster mode are untouched by placement undo.
+  await page.keyboard.press('ControlOrMeta+z')
+  await expect(editorTokens(page)).toHaveCount(2)
+  await expect(selection).toHaveCount(0)
+  await expect(walls).toHaveCount(2)
+})
+
 test('M07-D D6e Undo button rewinds placement edits and enables per mode', async ({
   page,
   request,

@@ -9,7 +9,9 @@ import {
   buildMonsterPlacementsBody,
   createPlacementIfFree,
   extractPlacementProblems,
+  findNearestFreePlacementAnchor,
   footprintForSizeName,
+  isPlacementAnchorFree,
   isRapidPlacementRepeat,
   monsterPlacementsFromMap,
   moveMonsterPlacement,
@@ -21,6 +23,7 @@ import {
   toMonsterPlacementsPayload,
   toggleMonsterPlacementVisibility,
 } from './mapMonsterPlacements'
+import type { WorkingMonsterPlacement } from './mapMonsterPlacements'
 
 const SAVED_ID = '20000000-0000-4000-8000-000000000001'
 const CUSTOM_ID = '30000000-0000-4000-8000-000000000001'
@@ -252,6 +255,133 @@ describe('placement problem extraction', () => {  it('returns problems only for 
       ),
     ).toEqual([])
     expect(extractPlacementProblems(new Error('boom'))).toEqual([])
+  })
+})
+
+describe('nearest free placement anchor (M07-D D6f Copy)', () => {
+  const footprintOf = (ref: string) =>
+    ref === 'large-ref'
+      ? { width: 2, height: 2 }
+      : ref === 'huge-ref'
+        ? { width: 3, height: 3 }
+        : { width: 1, height: 1 }
+
+  function row(
+    clientId: string,
+    templateRef: string,
+    anchor_x: number,
+    anchor_y: number,
+  ): WorkingMonsterPlacement {
+    return { clientId, templateRef, anchor_x, anchor_y, visibility: 'public' }
+  }
+
+  it('chooses the adjacent free cell in deterministic ring order', () => {
+    // Ring 1 from (5, 2) scans dy then dx: (-1,-1) first, so (4, 1) wins.
+    const placements = [row('source', 'goblin', 5, 2)]
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 5, anchor_y: 2 },
+        { width: 1, height: 1 },
+        { widthCells: 12, heightCells: 10 },
+        footprintOf,
+      ),
+    ).toEqual({ anchor_x: 4, anchor_y: 1 })
+  })
+
+  it('skips occupied anchors and out-of-bounds candidates', () => {
+    const placements = [row('source', 'goblin', 0, 0), row('blocker', 'goblin', 1, 0)]
+    // Ring 1 from (0, 0): (-1,-1)/(0,-1)/(1,-1)/(-1,0) are out of bounds,
+    // (1, 0) is occupied, (-1, 1) is out of bounds, so (0, 1) wins.
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 0, anchor_y: 0 },
+        { width: 1, height: 1 },
+        { widthCells: 12, heightCells: 10 },
+        footprintOf,
+      ),
+    ).toEqual({ anchor_x: 0, anchor_y: 1 })
+  })
+
+  it('respects Large footprints: the copy must clear its own source', () => {
+    const placements = [row('source', 'large-ref', 2, 2)]
+    // Every 2x2 anchor within Chebyshev distance 1 overlaps the source
+    // footprint; ring 2 starts at dy=-2, dx=-2, so (0, 0) is the first fit.
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 2, anchor_y: 2 },
+        { width: 2, height: 2 },
+        { widthCells: 6, heightCells: 6 },
+        footprintOf,
+      ),
+    ).toEqual({ anchor_x: 0, anchor_y: 0 })
+  })
+
+  it('respects Huge footprints', () => {
+    const placements = [row('source', 'huge-ref', 3, 3)]
+    // Rings 1-2 all overlap the 3x3 source; ring 3 starts at (0, 0), which
+    // exactly clears it.
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 3, anchor_y: 3 },
+        { width: 3, height: 3 },
+        { widthCells: 8, heightCells: 8 },
+        footprintOf,
+      ),
+    ).toEqual({ anchor_x: 0, anchor_y: 0 })
+  })
+
+  it('returns null when the map is full', () => {
+    const placements = [
+      row('a', 'goblin', 0, 0),
+      row('b', 'goblin', 1, 0),
+      row('c', 'goblin', 0, 1),
+      row('d', 'goblin', 1, 1),
+    ]
+    expect(
+      findNearestFreePlacementAnchor(
+        placements,
+        { anchor_x: 0, anchor_y: 0 },
+        { width: 1, height: 1 },
+        { widthCells: 2, heightCells: 2 },
+        footprintOf,
+      ),
+    ).toBeNull()
+  })
+
+  it('isPlacementAnchorFree rejects overlap and out-of-bounds footprints', () => {
+    const placements = [row('source', 'large-ref', 2, 2)]
+    const map = { widthCells: 6, heightCells: 6 }
+    expect(
+      isPlacementAnchorFree(
+        placements,
+        { anchor_x: 3, anchor_y: 3 },
+        { width: 1, height: 1 },
+        map,
+        footprintOf,
+      ),
+    ).toBe(false)
+    expect(
+      isPlacementAnchorFree(
+        placements,
+        { anchor_x: 5, anchor_y: 5 },
+        { width: 2, height: 2 },
+        map,
+        footprintOf,
+      ),
+    ).toBe(false)
+    expect(
+      isPlacementAnchorFree(
+        placements,
+        { anchor_x: 0, anchor_y: 0 },
+        { width: 2, height: 2 },
+        map,
+        footprintOf,
+      ),
+    ).toBe(true)
   })
 })
 

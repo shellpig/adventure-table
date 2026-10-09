@@ -191,6 +191,75 @@ export function toggleMonsterPlacementVisibility(
   )
 }
 
+export type PlacementMapSize = { widthCells: number; heightCells: number }
+
+export type PlacementAnchor = { anchor_x: number; anchor_y: number }
+
+/**
+ * M07-D D6f: whether a footprint anchored at (anchor_x, anchor_y) sits fully
+ * inside the map without overlapping any existing placement footprint.
+ * Pure helper backing the Copy search below.
+ */
+export function isPlacementAnchorFree(
+  placements: WorkingMonsterPlacement[],
+  anchor: PlacementAnchor,
+  footprint: MonsterFootprint,
+  mapSize: PlacementMapSize,
+  footprintOf: (templateRef: string) => MonsterFootprint,
+): boolean {
+  if (
+    anchor.anchor_x < 0 ||
+    anchor.anchor_y < 0 ||
+    anchor.anchor_x + footprint.width > mapSize.widthCells ||
+    anchor.anchor_y + footprint.height > mapSize.heightCells
+  ) {
+    return false
+  }
+  return !placements.some((p) => {
+    const other = footprintOf(p.templateRef)
+    return (
+      anchor.anchor_x < p.anchor_x + other.width &&
+      p.anchor_x < anchor.anchor_x + footprint.width &&
+      anchor.anchor_y < p.anchor_y + other.height &&
+      p.anchor_y < anchor.anchor_y + footprint.height
+    )
+  })
+}
+
+/**
+ * M07-D D6f: nearest free anchor for the placement Copy button. Searches
+ * outward ring by ring (Chebyshev distance 1, 2, …) from the source anchor;
+ * within a ring the order is deterministic (dy ascending, then dx ascending),
+ * and the first anchor whose whole footprint (same size as the source) is
+ * inside the map and overlaps no existing placement footprint (source
+ * included, so a Large+ copy steps far enough to clear its own source) wins.
+ * Returns null when the map has no free anchor.
+ */
+export function findNearestFreePlacementAnchor(
+  placements: WorkingMonsterPlacement[],
+  sourceAnchor: PlacementAnchor,
+  footprint: MonsterFootprint,
+  mapSize: PlacementMapSize,
+  footprintOf: (templateRef: string) => MonsterFootprint,
+): PlacementAnchor | null {
+  const maxRing = Math.max(mapSize.widthCells, mapSize.heightCells)
+  for (let ring = 1; ring <= maxRing; ring++) {
+    for (let dy = -ring; dy <= ring; dy++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue
+        const anchor = {
+          anchor_x: sourceAnchor.anchor_x + dx,
+          anchor_y: sourceAnchor.anchor_y + dy,
+        }
+        if (isPlacementAnchorFree(placements, anchor, footprint, mapSize, footprintOf)) {
+          return anchor
+        }
+      }
+    }
+  }
+  return null
+}
+
 /**
  * M07-D D6e: content equality for placement arrays. The editor's placement
  * updater pushes history only on a real change; helpers like

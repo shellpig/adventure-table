@@ -33,6 +33,7 @@ import {
   buildMonsterPlacementsBody,
   createPlacementIfFree,
   extractPlacementProblems,
+  findNearestFreePlacementAnchor,
   footprintForSizeName,
   isRapidPlacementRepeat,
   monsterPlacementsFromMap,
@@ -940,6 +941,65 @@ export function BattleMapEditor({
     setSelectedPlacementId(null)
   }, [selectedPlacementId, updatePlacements])
 
+  // M07-D D6f: Copy duplicates the selected placement (same template ref and
+  // visibility) at the nearest free anchor. The search runs against the
+  // latest array inside the updater; the client id is pre-generated so the
+  // updater stays pure under StrictMode double-invoke (one undo step, and
+  // the selected id always matches the committed row). The copy flows through
+  // updatePlacements, so one Ctrl+Z removes it like any other placement edit.
+  const copySelectedPlacement = useCallback(() => {
+    const snapshot = placementsRef.current
+    const source = snapshot.find((p) => p.clientId === selectedPlacementId)
+    if (!source) return
+    const sizeOf = (ref: string): { width: number; height: number } =>
+      footprintForSizeName(templateForPlacement(ref)?.size)
+    const footprint = sizeOf(source.templateRef)
+    const mapSize = { widthCells: map.width_cells, heightCells: map.height_cells }
+    const preview = findNearestFreePlacementAnchor(
+      snapshot,
+      { anchor_x: source.anchor_x, anchor_y: source.anchor_y },
+      footprint,
+      mapSize,
+      sizeOf,
+    )
+    if (!preview) {
+      setPlacementsMessage(copy.tacticalMonsterPlacementCopyNoSpace)
+      return
+    }
+    const copiedClientId = newPlacementClientId()
+    updatePlacements((prev) => {
+      const live = prev.find((p) => p.clientId === selectedPlacementId)
+      if (!live) return prev
+      const target = findNearestFreePlacementAnchor(
+        prev,
+        { anchor_x: live.anchor_x, anchor_y: live.anchor_y },
+        footprint,
+        mapSize,
+        sizeOf,
+      )
+      if (!target) return prev
+      return [
+        ...prev,
+        {
+          clientId: copiedClientId,
+          templateRef: live.templateRef,
+          anchor_x: target.anchor_x,
+          anchor_y: target.anchor_y,
+          visibility: live.visibility,
+        },
+      ]
+    })
+    // Select the copy so the popover follows it and the user can drag it.
+    setSelectedPlacementId(copiedClientId)
+  }, [
+    selectedPlacementId,
+    templateForPlacement,
+    map.width_cells,
+    map.height_cells,
+    copy.tacticalMonsterPlacementCopyNoSpace,
+    updatePlacements,
+  ])
+
   const handleSavePlacements = useCallback(async () => {
     if (placementsSaving) return
     // Snapshot by reference: every placement edit builds a new array, so a
@@ -1649,12 +1709,12 @@ export function BattleMapEditor({
           doorStateLabel={(state) => doorStateLabel(copy, state)}
           terrain={canvasTerrain}
           drawings={working.drawings}
-          tokens={monsterMode ? placementTokens : []}
+          tokens={placementTokens}
           imageUrl={imageUrl}
           imageRect={imageRect}
           camera={camera}
           isDm={true}
-          selectedEntryId={monsterMode ? selectedPlacementId : selectedId}
+          selectedEntryId={monsterMode ? selectedPlacementId : null}
           selectedObjectId={selectedId}
           highlightSegment={highlightSegment}
           highlightCell={highlightCell}
@@ -1663,6 +1723,11 @@ export function BattleMapEditor({
           previewDrawingPoints={previewDrawingPoints}
           previewDrawingStroke={{ color: penColor, width: penWidth }}
           onCellClick={handleCanvasCellClick}
+          // M07-D D6f: placements render in every tool mode. Outside monster
+          // mode they are dimmed and ignore pointer events, so wall/door/
+          // terrain/draw/erase/select clicks and drags always hit the grid.
+          tokensInteractive={monsterMode}
+          tokensDimmed={!monsterMode}
           onTokenClick={monsterMode ? handlePlacementTokenClick : undefined}
           onTokenPointerDown={monsterMode ? handlePlacementTokenPointerDown : undefined}
           onCellPointerEnter={monsterMode ? handlePlacementCellPointerEnter : undefined}
@@ -1720,6 +1785,14 @@ export function BattleMapEditor({
                   data-testid="monster-placement-remove"
                 >
                   {libraryCopy.monsterPlacementRemove}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  onClick={copySelectedPlacement}
+                  data-testid="monster-placement-copy"
+                >
+                  {copy.tacticalMonsterPlacementCopy}
                 </button>
               </div>
             </div>
