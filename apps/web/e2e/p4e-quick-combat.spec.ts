@@ -180,6 +180,15 @@ test('P4-E E.1 DM + Player Quick Combat journey with enemy secrecy and range adj
     const readTurn = async () => (await readDetail(request, prefix)).current_turn_entry_id
     let resolution: AttackResolution | null = null
     for (let round = 0; round < MAX_ATTACK_ROUNDS && !(resolution?.hit); round += 1) {
+      if (round > 0) {
+        // A miss spends the hero's action while it is still the hero's turn,
+        // so pass the turn before advancing back to the hero.
+        const advanced = page.waitForResponse((response) => (
+          response.request().method() === 'POST' && response.url().includes('/combat/turn/advance')
+        ))
+        await page.getByRole('button', { name: 'Advance Turn' }).click()
+        await responseJson(await advanced)
+      }
       await advanceTo(page, readTurn, heroEntry.id, 12)
       await expect(combatStage(player.page).locator('.session-combat__your-turn-badge')).toBeVisible()
       resolution = await playerAttack(page, player.page, sessionId, QUICK_ENEMY.name)

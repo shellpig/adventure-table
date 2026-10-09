@@ -261,12 +261,16 @@ export async function pickSrdMonster(page: Page, name: string): Promise<void> {
   await input.fill(name)
   const listboxId = await input.getAttribute('aria-controls')
   expect(listboxId).toBeTruthy()
-  const option = page
+  const matches = page
     .locator(`[id="${listboxId}"]`)
     .getByRole('option')
     .filter({ has: page.locator('span', { hasText: new RegExp(`^${name}$`) }) })
-  await expect(option).toHaveCount(1)
-  await option.click()
+  // The picker also lists the Room's custom templates. A same-named custom
+  // copy (e.g. m07d-library-journey's Goblin in a shared worker Room) ties on
+  // name and sorts first by value (`custom:` < `srd5.1:`), so the SRD entry is
+  // always the last match.
+  await expect(matches.first()).toBeVisible()
+  await matches.last().click()
 }
 
 export async function addQuickEnemy(
