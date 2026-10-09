@@ -1019,6 +1019,41 @@ test('M07-D D6f placements stay visible outside monster mode and copy duplicates
   await expect(walls).toHaveCount(2)
 })
 
+test('M07-D D6g saved placements show names and footprints before monster mode is opened', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D D6g Fresh Open'
+  const map = await createBlankMap(request, roomId, mapName, 12, 10)
+  const horror = await createCustomTemplate(request, roomId, 'E2E D6g Large Horror', 'Large')
+  const saved = await putPlacements(request, roomId, map.id, map.revision, [
+    { template_key: GOBLIN_REF, anchor_x: 2, anchor_y: 2, visibility: 'public' },
+    {
+      custom_template_id: horror.ref.replace(/^custom:/, ''),
+      anchor_x: 6,
+      anchor_y: 4,
+      visibility: 'public',
+    },
+  ])
+  const [goblinId, horrorId] = saved.monster_placements.map((p) => p.id)
+
+  // The editor opens in Select mode; the template menu is never loaded, yet
+  // the placements must already show localized names and real footprints.
+  await openLibraryEditor(page, roomId, mapName)
+  await expect(page.getByTestId('monster-placement-panel')).toHaveCount(0)
+  const goblin = editorTokens(page, `[data-entry-id="${goblinId}"]`)
+  const large = editorTokens(page, `[data-entry-id="${horrorId}"]`)
+  await expect(goblin).toContainText('Goblin')
+  await expect(large).toContainText('E2E D6g Large Horror')
+  await expect(page.getByTestId('map-editor-canvas')).not.toContainText('srd5.1:monster')
+  await expect(page.getByTestId('map-editor-canvas')).not.toContainText('custom:')
+  await expect(goblin.locator('rect')).toHaveAttribute('width', String(CELL_SIZE))
+  await expect(large.locator('rect')).toHaveAttribute('width', String(2 * CELL_SIZE))
+  await expect(large.locator('rect')).toHaveAttribute('height', String(2 * CELL_SIZE))
+})
+
 test('M07-D D6e Undo button rewinds placement edits and enables per mode', async ({
   page,
   request,

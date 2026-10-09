@@ -700,11 +700,13 @@ export function BattleMapEditor({
   // Resolve saved placements whose template is not on the current menu page.
   // Each missing ref is fetched once via the detail endpoint (archived custom
   // templates included); refs the server rejects are remembered so a reopen
-  // with a deleted template does not refetch in a loop.
+  // with a deleted template does not refetch in a loop. Placements render in
+  // every mode, so this also runs before the menu list is ever loaded; only
+  // in monster mode does it wait for that list to avoid duplicate fetches.
   useEffect(() => {
-    if (!monsterMode || templates === null) return
+    if (monsterMode && templates === null) return
     const known = new Set([
-      ...templates.map((t) => t.ref),
+      ...(templates ?? []).map((t) => t.ref),
       ...Object.keys(resolvedTemplates),
     ])
     const missing = Array.from(new Set(placements.map((p) => p.templateRef))).filter(
